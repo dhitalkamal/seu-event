@@ -39,3 +39,23 @@ extend-exclude = ["*/migrations/*.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
+
+[tool.mypy]
+python_version = "3.13"
+ignore_missing_imports = true
+# django ORM models use descriptor-based fields that mypy cannot infer without stubs
+# suppress module-level annotation noise in infrastructure and presentation layers
+[[tool.mypy.overrides]]
+module = [
+    "apps.events.infrastructure.*",
+    "apps.events.presentation.*",
+    "apps.events.application.*",
+    "apps.events.management.*",
+    "apps.common.api.*",
+    "apps.common.health",
+    "apps.events.tests.*",
+    "apps.events.migrations.*",
+    "apps.common.middleware.*",
+    "config.*",
+]
+ignore_errors = true

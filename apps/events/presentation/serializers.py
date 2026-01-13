@@ -25,10 +25,10 @@ class CreateEventSerializer(serializers.Serializer):
     online_url = serializers.URLField(max_length=2048, required=False, allow_null=True)
     category_id = serializers.UUIDField(required=False, allow_null=True)
     tag_ids = serializers.ListField(child=serializers.UUIDField(), required=False, default=list)
+    # optional: attach the event to an organisation
+    organisation_id = serializers.UUIDField(required=False, allow_null=True)
     # primary USP: list of email domains; empty means no restriction
-    allowed_domains = serializers.ListField(
-        child=serializers.CharField(max_length=253), required=False, default=list
-    )
+    allowed_domains = serializers.ListField(child=serializers.CharField(max_length=253), required=False, default=list)
 
 
 class UpdateEventSerializer(serializers.Serializer):
@@ -51,9 +51,7 @@ class UpdateEventSerializer(serializers.Serializer):
     online_url = serializers.URLField(max_length=2048, required=False, allow_null=True)
     category_id = serializers.UUIDField(required=False, allow_null=True)
     tag_ids = serializers.ListField(child=serializers.UUIDField(), required=False)
-    allowed_domains = serializers.ListField(
-        child=serializers.CharField(max_length=253), required=False
-    )
+    allowed_domains = serializers.ListField(child=serializers.CharField(max_length=253), required=False)
 
 
 class EventMediaSerializer(serializers.Serializer):
@@ -138,6 +136,7 @@ class EventResponseSerializer(serializers.Serializer):
 
     id = serializers.UUIDField()
     organiser_id = serializers.UUIDField()
+    organisation_id = serializers.UUIDField(allow_null=True)
     title = serializers.CharField()
     description = serializers.CharField()
     location = serializers.CharField()

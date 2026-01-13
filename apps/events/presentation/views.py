@@ -15,6 +15,7 @@ from rest_framework.views import APIView
 from apps.common.api.pagination import StandardPagination
 from apps.common.api.responses import created_response, error_response, success_response
 from apps.common.health import check_database, check_rabbitmq, check_redis
+from apps.common.permissions import IsOrgManager
 from apps.events.application.use_cases.complete_event import CompleteEventUseCase
 from apps.events.application.use_cases.create_category import CreateCategoryUseCase
 from apps.events.application.use_cases.create_event import CreateEventUseCase
@@ -49,6 +50,22 @@ from apps.events.presentation.serializers import (
     TagResponseSerializer,
     UpdateEventSerializer,
 )
+
+
+def _has_org_permission(request: Request, organisation_id: uuid.UUID) -> bool:
+    """
+    Return True when the request carries manager-or-higher org role for the organisation.
+
+    Used by mutation views when an event belongs to an organisation.
+    Builds a throwaway view-like object so IsOrgManager can extract org_id normally.
+    """
+
+    class _FakeView:
+        org_id: uuid.UUID = organisation_id
+        kwargs: dict = {}
+
+    return IsOrgManager().has_permission(request, _FakeView())  # type: ignore[arg-type]
+
 
 # anchor variables keep use-case and serializer imports alive through ruff
 _PAGINATION_CLASS = StandardPagination
@@ -89,8 +106,7 @@ class HealthCheckView(APIView):
         tags=["Health"],
         summary="Service health check",
         description=(
-            "Checks connectivity to PostgreSQL, Redis, and RabbitMQ. "
-            "Returns 200 when all dependencies are healthy, 503 when any are down."
+            "Checks connectivity to PostgreSQL, Redis, and RabbitMQ. Returns 200 when all dependencies are healthy, 503 when any are down."
         ),
         auth=[],
         responses={
@@ -267,6 +283,7 @@ class CreateEventView(APIView):
             category_id=d.get("category_id"),
             tag_ids=d.get("tag_ids", []),
             allowed_domains=d.get("allowed_domains", []),
+            organisation_id=d.get("organisation_id"),
         )
         return created_response(EventResponseSerializer(entity).data, request=request)
 
@@ -312,13 +329,32 @@ class EventDetailView(APIView):
         """Apply a partial update to the event. Only provided fields are changed."""
         ser = UpdateEventSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
+
+        # load event first to choose the correct auth path
+        repo = DjangoEventRepository()
+        event = GetEventUseCase(repo).execute(event_id=event_id)
+
+        if event.organisation_id is not None:
+            # org-owned event: manager-or-higher role is sufficient
+            if not _has_org_permission(request, event.organisation_id):
+                return error_response(
+                    code="ERR_EVENT_NOT_OWNED",
+                    message="Insufficient org role to update this event.",
+                    http_status=403,
+                    request=request,
+                )
+            effective_organiser_id = event.organiser_id
+        else:
+            # legacy individual-owned event: must be the organiser
+            effective_organiser_id = uuid.UUID(str(request.user.id))
+
         entity = UpdateEventUseCase(
-            DjangoEventRepository(),
+            repo,
             category_repo=DjangoCategoryRepository(),
             tag_repo=DjangoTagRepository(),
         ).execute(
             event_id=event_id,
-            organiser_id=uuid.UUID(str(request.user.id)),
+            organiser_id=effective_organiser_id,
             **ser.validated_data,
         )
         return success_response(EventResponseSerializer(entity).data, request=request)
@@ -335,9 +371,24 @@ class EventDetailView(APIView):
     )
     def delete(self, request: Request, event_id: uuid.UUID) -> Response:
         """Soft-delete the event by setting deleted_at and status=cancelled."""
-        DeleteEventUseCase(DjangoEventRepository()).execute(
+        repo = DjangoEventRepository()
+        event = GetEventUseCase(repo).execute(event_id=event_id)
+
+        if event.organisation_id is not None:
+            if not _has_org_permission(request, event.organisation_id):
+                return error_response(
+                    code="ERR_EVENT_NOT_OWNED",
+                    message="Insufficient org role to delete this event.",
+                    http_status=403,
+                    request=request,
+                )
+            effective_organiser_id = event.organiser_id
+        else:
+            effective_organiser_id = uuid.UUID(str(request.user.id))
+
+        DeleteEventUseCase(repo).execute(
             event_id=event_id,
-            organiser_id=uuid.UUID(str(request.user.id)),
+            organiser_id=effective_organiser_id,
         )
         return Response(status=204)
 
@@ -361,11 +412,24 @@ class PublishEventView(APIView):
     )
     def post(self, request: Request, event_id: uuid.UUID) -> Response:
         """Publish the event after validating ownership, status, and start date."""
-        entity = PublishEventUseCase(
-            DjangoEventRepository(), search_index=ElasticsearchEventIndex()
-        ).execute(
+        repo = DjangoEventRepository()
+        event = GetEventUseCase(repo).execute(event_id=event_id)
+
+        if event.organisation_id is not None:
+            if not _has_org_permission(request, event.organisation_id):
+                return error_response(
+                    code="ERR_EVENT_NOT_OWNED",
+                    message="Insufficient org role to publish this event.",
+                    http_status=403,
+                    request=request,
+                )
+            effective_organiser_id = event.organiser_id
+        else:
+            effective_organiser_id = uuid.UUID(str(request.user.id))
+
+        entity = PublishEventUseCase(repo, search_index=ElasticsearchEventIndex()).execute(
             event_id=event_id,
-            organiser_id=uuid.UUID(str(request.user.id)),
+            organiser_id=effective_organiser_id,
         )
         return success_response(EventResponseSerializer(entity).data, request=request)
 
@@ -431,10 +495,7 @@ class RegistrationCountView(APIView):
     @extend_schema(
         tags=["Internal"],
         summary="Update event registered_count",
-        description=(
-            "Called by participation-service when a registration is created (+1) "
-            "or cancelled (-1). Not for external clients."
-        ),
+        description=("Called by participation-service when a registration is created (+1) or cancelled (-1). Not for external clients."),
         auth=[],
         request=RegistrationCountSerializer,
         responses={
@@ -477,18 +538,14 @@ class CategoryListCreateView(APIView):
     def get(self, request: Request) -> Response:
         """Return all categories ordered by depth then name."""
         categories = _LIST_CAT_UC(DjangoCategoryRepository()).execute()
-        return success_response(
-            CategoryResponseSerializer(categories, many=True).data, request=request
-        )
+        return success_response(CategoryResponseSerializer(categories, many=True).data, request=request)
 
     @extend_schema(
         tags=["Categories"],
         summary="Create a category",
         request=CreateCategorySerializer,
         responses={
-            201: OpenApiResponse(
-                description="Category created.", response=CategoryResponseSerializer
-            ),
+            201: OpenApiResponse(description="Category created.", response=CategoryResponseSerializer),
             401: OpenApiResponse(description="Missing or invalid JWT."),
             422: OpenApiResponse(description="Validation error or depth limit exceeded."),
         },
@@ -608,7 +665,6 @@ class CoverImageUploadView(APIView):
 
 
 # Gallery and media views
-
 
 
 class EventMediaListCreateView(APIView):
@@ -759,13 +815,16 @@ class AdminEventAnalyticsView(APIView):
             .values("id", "title", "organisation_id", "registered_count", "status", "event_type")
         )
 
-        return success_response({
-            "new_events_30d": new_30d,
-            "prev_events_30d": prev_30d,
-            "total_events": total,
-            "monthly_series": series,
-            "top_events": [
-                {**e, "id": str(e["id"]), "organisation_id": str(e["organisation_id"]) if e["organisation_id"] else None}
-                for e in top_events
-            ],
-        }, request=request)
+        return success_response(
+            {
+                "new_events_30d": new_30d,
+                "prev_events_30d": prev_30d,
+                "total_events": total,
+                "monthly_series": series,
+                "top_events": [
+                    {**e, "id": str(e["id"]), "organisation_id": str(e["organisation_id"]) if e["organisation_id"] else None}
+                    for e in top_events
+                ],
+            },
+            request=request,
+        )

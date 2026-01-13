@@ -100,6 +100,8 @@ class Event(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organiser_id = models.UUIDField()
+    # optional: event belongs to an organisation (null for individually-owned events)
+    organisation_id = models.UUIDField(null=True, blank=True, db_index=True)
     title = models.CharField(max_length=255)
     description = models.TextField()
     location = models.CharField(max_length=500)
@@ -108,9 +110,7 @@ class Event(models.Model):
     capacity = models.PositiveIntegerField()
     registered_count = models.PositiveIntegerField(default=0)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
-    visibility = models.CharField(
-        max_length=20, choices=Visibility.choices, default=Visibility.PUBLIC
-    )
+    visibility = models.CharField(max_length=20, choices=Visibility.choices, default=Visibility.PUBLIC)
     is_free = models.BooleanField(default=True)
     price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     cover_image = models.URLField(max_length=2048, null=True, blank=True)
@@ -126,6 +126,8 @@ class Event(models.Model):
     tags = models.ManyToManyField(Tag, blank=True, related_name="events")
     # primary USP: empty list means no restriction
     allowed_domains = models.JSONField(default=list, blank=True)
+    # null when the event is not part of a recurrence series
+    parent_event_id = models.UUIDField(null=True, blank=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -135,6 +137,7 @@ class Event(models.Model):
         return EventEntity(
             id=self.id,
             organiser_id=self.organiser_id,
+            organisation_id=self.organisation_id,
             title=self.title,
             description=self.description,
             location=self.location,
@@ -155,6 +158,7 @@ class Event(models.Model):
             created_at=self.created_at,
             updated_at=self.updated_at,
             deleted_at=self.deleted_at,
+            parent_event_id=self.parent_event_id,
         )
 
     @classmethod
@@ -163,6 +167,7 @@ class Event(models.Model):
         return cls(
             id=entity.id,
             organiser_id=entity.organiser_id,
+            organisation_id=entity.organisation_id,
             title=entity.title,
             description=entity.description,
             location=entity.location,
@@ -180,6 +185,7 @@ class Event(models.Model):
             category_id=entity.category_id,
             allowed_domains=entity.allowed_domains,
             deleted_at=entity.deleted_at,
+            parent_event_id=entity.parent_event_id,
         )
 
 

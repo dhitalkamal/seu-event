@@ -42,6 +42,7 @@ class CreateEventUseCase:
         category_id: uuid.UUID | None = None,
         tag_ids: list[uuid.UUID] | None = None,
         allowed_domains: list[str] | None = None,
+        organisation_id: uuid.UUID | None = None,
     ) -> EventEntity:
         """
         Validate dates, category, tags, apply pricing rule, and persist the event.
@@ -110,5 +111,6 @@ class CreateEventUseCase:
             category_id=category_id,
             tag_ids=resolved_tag_ids,
             allowed_domains=[d.lower().strip() for d in (allowed_domains or []) if d.strip()],
+            organisation_id=organisation_id,
         )
         return self._events.create(entity)

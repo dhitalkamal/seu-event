@@ -56,6 +56,10 @@ class EventEntity:
     tag_ids: list[uuid.UUID] = field(default_factory=list)
     # ! primary USP - empty list means no restriction (visible to everyone)
     allowed_domains: list[str] = field(default_factory=list)
+    # set on events generated as part of a recurrence series
+    parent_event_id: uuid.UUID | None = None
+    # optional: set when the event belongs to an organisation rather than an individual
+    organisation_id: uuid.UUID | None = None
 
     @property
     def is_at_capacity(self) -> bool:
