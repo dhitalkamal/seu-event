@@ -60,6 +60,10 @@ class EventEntity:
     parent_event_id: uuid.UUID | None = None
     # optional: set when the event belongs to an organisation rather than an individual
     organisation_id: uuid.UUID | None = None
+    # venue reference and coordinates; lat/lng supplied by the client (client-side geocoding)
+    venue_id: uuid.UUID | None = None
+    latitude: Decimal | None = None
+    longitude: Decimal | None = None
 
     @property
     def is_at_capacity(self) -> bool:

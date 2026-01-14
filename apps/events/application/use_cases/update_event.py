@@ -43,12 +43,18 @@ class UpdateEventUseCase:
         category_id: uuid.UUID | None = None,
         tag_ids: list[uuid.UUID] | None = None,
         allowed_domains: list[str] | None = None,
+        venue_id: uuid.UUID | None = None,
+        latitude: Decimal | None = None,
+        longitude: Decimal | None = None,
     ) -> EventEntity:
         """
         Apply only the provided (non-None) fields and persist.
 
         @param event_id - the event to update
         @param organiser_id - UUID from JWT; must match event.organiser_id
+        @param venue_id - optional UUID reference to management-service venue
+        @param latitude - optional decimal latitude (client-side geocoded)
+        @param longitude - optional decimal longitude (client-side geocoded)
         @raises EventNotOwnedError if the requester is not the organiser
         @raises EventDateError if the updated dates are logically invalid
         @raises CategoryNotFoundError if category_id does not exist
@@ -112,6 +118,13 @@ class UpdateEventUseCase:
 
         if allowed_domains is not None:
             event.allowed_domains = [d.lower().strip() for d in allowed_domains if d.strip()]
+
+        if venue_id is not None:
+            event.venue_id = venue_id
+        if latitude is not None:
+            event.latitude = latitude
+        if longitude is not None:
+            event.longitude = longitude
 
         event.updated_at = datetime.now(timezone.utc)
         return self._events.update(event)

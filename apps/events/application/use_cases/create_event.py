@@ -36,13 +36,16 @@ class CreateEventUseCase:
         capacity: int,
         visibility: str,
         is_free: bool,
-        price: Decimal | None,
+        price: Decimal | None = None,
         cover_image: str | None = None,
         is_online: bool = False,
         category_id: uuid.UUID | None = None,
         tag_ids: list[uuid.UUID] | None = None,
         allowed_domains: list[str] | None = None,
         organisation_id: uuid.UUID | None = None,
+        venue_id: uuid.UUID | None = None,
+        latitude: Decimal | None = None,
+        longitude: Decimal | None = None,
     ) -> EventEntity:
         """
         Validate dates, category, tags, apply pricing rule, and persist the event.
@@ -59,6 +62,9 @@ class CreateEventUseCase:
         @param price - ticket price in NPR; ignored when is_free is True
         @param category_id - optional FK to a Category
         @param tag_ids - optional list of Tag UUIDs to attach
+        @param venue_id - optional UUID reference to management-service venue
+        @param latitude - optional decimal latitude (client-side geocoded)
+        @param longitude - optional decimal longitude (client-side geocoded)
         @returns the persisted EventEntity with status=DRAFT
         @raises EventDateError if end_date <= start_date
         @raises CategoryNotFoundError if category_id does not exist
@@ -112,5 +118,8 @@ class CreateEventUseCase:
             tag_ids=resolved_tag_ids,
             allowed_domains=[d.lower().strip() for d in (allowed_domains or []) if d.strip()],
             organisation_id=organisation_id,
+            venue_id=venue_id,
+            latitude=latitude,
+            longitude=longitude,
         )
         return self._events.create(entity)

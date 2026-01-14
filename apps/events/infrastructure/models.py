@@ -128,6 +128,11 @@ class Event(models.Model):
     allowed_domains = models.JSONField(default=list, blank=True)
     # null when the event is not part of a recurrence series
     parent_event_id = models.UUIDField(null=True, blank=True)
+    # venue reference: nullable UUID pointing to a venue in management-service
+    venue_id = models.UUIDField(null=True, blank=True, db_index=True)
+    # coordinates supplied by client-side geocoding (we never call a geocoding API)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -159,6 +164,9 @@ class Event(models.Model):
             updated_at=self.updated_at,
             deleted_at=self.deleted_at,
             parent_event_id=self.parent_event_id,
+            venue_id=self.venue_id,
+            latitude=self.latitude,
+            longitude=self.longitude,
         )
 
     @classmethod
@@ -186,6 +194,9 @@ class Event(models.Model):
             allowed_domains=entity.allowed_domains,
             deleted_at=entity.deleted_at,
             parent_event_id=entity.parent_event_id,
+            venue_id=entity.venue_id,
+            latitude=entity.latitude,
+            longitude=entity.longitude,
         )
 
 
@@ -206,4 +217,6 @@ class EventMedia(models.Model):
     media_type = models.CharField(max_length=10, choices=MediaType.choices, default=MediaType.IMAGE)
     caption = models.CharField(max_length=255, blank=True, default="")
     position = models.PositiveSmallIntegerField(default=0)
+    # keys are "{w}x{h}" e.g. "200x200", "400x400", "800x800"
+    thumbnail_urls = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

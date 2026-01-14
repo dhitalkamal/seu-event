@@ -696,7 +696,17 @@ class EventMediaListCreateView(APIView):
 
     @extend_schema(tags=["Events"], summary="Add event gallery item")
     def post(self, request: Request, event_id: uuid.UUID) -> Response:
-        """Add a media item to the event gallery."""
+        """Add a media item to the event gallery. Enforces a maximum of 20 images per event."""
+        # ! hard cap: no more than 20 images per event
+        existing_count = EventMedia.objects.filter(event_id=event_id, media_type="image").count()
+        if existing_count >= 20:
+            return error_response(
+                code="ERR_EVENT_MEDIA_LIMIT",
+                message="Maximum of 20 images per event has been reached.",
+                http_status=400,
+                request=request,
+            )
+
         ser = EventMediaSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         d = ser.validated_data
@@ -715,6 +725,7 @@ class EventMediaListCreateView(APIView):
                 "media_type": media.media_type,
                 "caption": media.caption,
                 "position": media.position,
+                "thumbnail_urls": media.thumbnail_urls,
                 "created_at": media.created_at.isoformat(),
             },
             request=request,

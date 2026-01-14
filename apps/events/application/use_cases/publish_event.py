@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
+from typing import Any
 
 from apps.events.domain.entities import EventEntity
 from apps.events.domain.exceptions import (
@@ -24,13 +25,18 @@ class PublishEventUseCase:
         self,
         event_repo: IEventRepository,
         search_index: IEventSearchIndex | None = None,
+        redis_client: Any | None = None,
     ) -> None:
         self._events = event_repo
         self._index = search_index
+        self._redis = redis_client
 
     def execute(self, *, event_id: uuid.UUID, organiser_id: uuid.UUID) -> EventEntity:
         """
         Validate ownership and state, then set status to published.
+
+        Also seeds the Redis capacity counter so participation-service can
+        do fast capacity checks without hitting the DB.
 
         @param event_id - the event to publish
         @param organiser_id - UUID from the JWT; must match event.organiser_id
@@ -44,9 +50,7 @@ class PublishEventUseCase:
             raise EventNotOwnedError("You are not the organiser of this event.")
 
         if event.status not in self._ALLOWED_FROM:
-            raise InvalidEventStatusTransitionError(
-                f"Cannot publish an event with status '{event.status}'."
-            )
+            raise InvalidEventStatusTransitionError(f"Cannot publish an event with status '{event.status}'.")
 
         if event.start_date <= datetime.now(timezone.utc):
             raise EventDateError("Cannot publish an event whose start date has already passed.")
@@ -54,6 +58,14 @@ class PublishEventUseCase:
         event.status = "published"
         event.updated_at = datetime.now(timezone.utc)
         saved = self._events.update(event)
+
         if self._index is not None:
             self._index.index_event(saved)
+
+        # seed Redis capacity counter for fast-path checks in participation-service
+        if self._redis is not None:
+            from apps.events.infrastructure.capacity import init_capacity_counter
+
+            init_capacity_counter(event=saved, redis_client=self._redis)
+
         return saved
