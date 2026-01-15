@@ -37,6 +37,7 @@ from apps.events.infrastructure.repositories import (
     DjangoEventRepository,
     DjangoTagRepository,
 )
+from apps.events.infrastructure.review_models import EventReview
 from apps.events.infrastructure.search_index import ElasticsearchEventIndex
 from apps.events.presentation.serializers import (
     CategoryResponseSerializer,
@@ -836,6 +837,133 @@ class AdminEventAnalyticsView(APIView):
                     {**e, "id": str(e["id"]), "organisation_id": str(e["organisation_id"]) if e["organisation_id"] else None}
                     for e in top_events
                 ],
+            },
+            request=request,
+        )
+
+
+class EventReviewListCreateView(APIView):
+    """Submit a review (POST) or list reviews (GET) for a specific event."""
+
+    def get_permissions(self) -> list:
+        """Anyone can read reviews; only authenticated users can submit."""
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
+    @extend_schema(
+        tags=["Reviews"],
+        summary="List event reviews",
+        description="Returns all reviews for the given event, newest first.",
+        responses={
+            200: OpenApiResponse(description="Review list returned."),
+        },
+    )
+    def get(self, request: Request, event_id: uuid.UUID) -> Response:
+        """Return all reviews for the event."""
+        reviews = EventReview.objects.filter(event_id=event_id).order_by("-created_at")
+        data = [
+            {
+                "id": str(r.id),
+                "event_id": str(r.event_id),
+                "user_id": str(r.user_id),
+                "rating": r.rating,
+                "highlights": r.highlights,
+                "note": r.note,
+                "created_at": r.created_at.isoformat(),
+            }
+            for r in reviews
+        ]
+        return success_response(data, request=request)
+
+    @extend_schema(
+        tags=["Reviews"],
+        summary="Submit an event review",
+        description=(
+            "Submit a 1-5 star rating plus optional highlights and note for a completed event. "
+            "Each user can submit at most one review per event."
+        ),
+        responses={
+            201: OpenApiResponse(description="Review submitted."),
+            401: OpenApiResponse(description="Missing or invalid JWT."),
+            409: OpenApiResponse(description="User already reviewed this event."),
+            422: OpenApiResponse(description="Validation error (e.g. rating out of range)."),
+        },
+    )
+    def post(self, request: Request, event_id: uuid.UUID) -> Response:
+        """Validate payload and persist the review."""
+        from rest_framework import serializers as drf_serializers
+
+        class _S(drf_serializers.Serializer):
+            rating = drf_serializers.IntegerField(min_value=1, max_value=5)
+            highlights = drf_serializers.ListField(
+                child=drf_serializers.CharField(max_length=100),
+                required=False,
+                default=list,
+            )
+            note = drf_serializers.CharField(max_length=2000, required=False, default="", allow_blank=True)
+
+        ser = _S(data=request.data)
+        ser.is_valid(raise_exception=True)
+        d = ser.validated_data
+        user_id = uuid.UUID(str(request.user.id))
+
+        if EventReview.objects.filter(event_id=event_id, user_id=user_id).exists():
+            return error_response(
+                code="ERR_REVIEW_ALREADY_EXISTS",
+                message="You have already reviewed this event.",
+                http_status=409,
+                request=request,
+            )
+
+        review = EventReview.objects.create(
+            event_id=event_id,
+            user_id=user_id,
+            rating=d["rating"],
+            highlights=d["highlights"],
+            note=d["note"],
+        )
+        return created_response(
+            {
+                "id": str(review.id),
+                "event_id": str(review.event_id),
+                "user_id": str(review.user_id),
+                "rating": review.rating,
+                "highlights": review.highlights,
+                "note": review.note,
+                "created_at": review.created_at.isoformat(),
+            },
+            request=request,
+        )
+
+
+class EventReviewSummaryView(APIView):
+    """Return average rating and review count for a specific event."""
+
+    authentication_classes: list = []
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        tags=["Reviews"],
+        summary="Event review summary",
+        description="Returns the average rating and total review count for the given event.",
+        responses={
+            200: OpenApiResponse(description="Summary returned."),
+        },
+    )
+    def get(self, request: Request, event_id: uuid.UUID) -> Response:
+        """Aggregate and return the rating summary for the event."""
+        from django.db.models import Avg, Count
+
+        result = EventReview.objects.filter(event_id=event_id).aggregate(
+            avg_rating=Avg("rating"),
+            count=Count("id"),
+        )
+        return success_response(
+            {
+                "event_id": str(event_id),
+                "average_rating": round(result["avg_rating"], 2) if result["avg_rating"] else None,
+                "review_count": result["count"],
             },
             request=request,
         )

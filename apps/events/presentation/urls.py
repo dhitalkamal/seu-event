@@ -14,6 +14,8 @@ from .views import (
     EventMediaDetailView,
     EventMediaListCreateView,
     EventMyView,
+    EventReviewListCreateView,
+    EventReviewSummaryView,
     HealthCheckView,
     PublishEventView,
     RegistrationCountView,
@@ -35,13 +37,21 @@ urlpatterns: list[URLPattern] = [
     path("categories/", CategoryListCreateView.as_view(), name="category-list-create"),
     path("tags/", TagListCreateView.as_view(), name="tag-list-create"),
     path("uploads/cover/", CoverImageUploadView.as_view(), name="cover-image-upload"),
-    path(
-        "events/<uuid:event_id>/media/", EventMediaListCreateView.as_view(), name="event-media-list"
-    ),
+    path("events/<uuid:event_id>/media/", EventMediaListCreateView.as_view(), name="event-media-list"),
     path(
         "events/<uuid:event_id>/media/<uuid:media_id>/",
         EventMediaDetailView.as_view(),
         name="event-media-detail",
     ),
     path("admin/analytics/", AdminEventAnalyticsView.as_view(), name="admin-event-analytics"),
+    path(
+        "events/<uuid:event_id>/reviews/",
+        EventReviewListCreateView.as_view(),
+        name="event-reviews",
+    ),
+    path(
+        "events/<uuid:event_id>/reviews/summary/",
+        EventReviewSummaryView.as_view(),
+        name="event-reviews-summary",
+    ),
 ]
