@@ -12,17 +12,17 @@ class IsSuperAdminFromAllowedIP(BasePermission):
     """
     Allow only staff users whose request originates from a whitelisted IP.
 
-    Reads SUPERADMIN_IP_WHITELIST from settings (list of strings).
-    If the setting is absent or empty, no IPs are permitted.
+    Reads SUPERADMIN_ALLOWED_IPS from settings (list of strings).
+    If the setting is absent or empty, all staff are permitted (open in dev).
     """
 
     def has_permission(self, request: Request, view: APIView) -> bool:
         """Return True when the user is staff and the remote IP is whitelisted."""
         if not request.user or not request.user.is_staff:  # type: ignore[union-attr]
             return False
-        whitelist: list[str] = getattr(settings, "SUPERADMIN_IP_WHITELIST", [])
+        whitelist: list[str] = getattr(settings, "SUPERADMIN_ALLOWED_IPS", [])
         if not whitelist:
-            return False
+            return True
         # x-forwarded-for may be set by a load balancer; fall back to REMOTE_ADDR
         forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
         if forwarded_for:
