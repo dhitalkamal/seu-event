@@ -31,6 +31,7 @@ from apps.events.application.use_cases.update_event import UpdateEventUseCase
 from apps.events.application.use_cases.update_registration_count import (
     UpdateRegistrationCountUseCase,
 )
+from apps.events.infrastructure.event_publisher import EventPublisher
 from apps.events.infrastructure.models import EventMedia
 from apps.events.infrastructure.repositories import (
     DjangoCategoryRepository,
@@ -357,6 +358,12 @@ class EventDetailView(APIView):
             event_id=event_id,
             organiser_id=effective_organiser_id,
             **ser.validated_data,
+        )
+        # notify downstream services (notification-service creates attendee in-app alerts)
+        EventPublisher().publish_event_updated(
+            event_id=entity.id,
+            organiser_id=entity.organiser_id,
+            title=entity.title,
         )
         return success_response(EventResponseSerializer(entity).data, request=request)
 

@@ -20,9 +20,7 @@ def test_publish_indexes_event():
     repo = FakeEventRepository([event])
     index = FakeEventSearchIndex()
 
-    PublishEventUseCase(repo, search_index=index).execute(
-        event_id=event.id, organiser_id=organiser_id
-    )
+    PublishEventUseCase(repo, search_index=index).execute(event_id=event.id, organiser_id=organiser_id)
 
     assert len(index.indexed) == 1
     assert index.indexed[0].id == event.id

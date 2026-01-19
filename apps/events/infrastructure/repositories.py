@@ -147,11 +147,7 @@ class DjangoEventRepository(IEventRepository):
         entities = [obj.to_entity() for obj in qs.order_by("-created_at")]
         if user_email_domain is not None:
             domain_lower = user_email_domain.lower()
-            entities = [
-                e
-                for e in entities
-                if not e.allowed_domains or domain_lower in [d.lower() for d in e.allowed_domains]
-            ]
+            entities = [e for e in entities if not e.allowed_domains or domain_lower in [d.lower() for d in e.allowed_domains]]
         else:
             # unauthenticated: only unrestricted events
             entities = [e for e in entities if not e.allowed_domains]

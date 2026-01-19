@@ -48,9 +48,7 @@ def test_create_grandchild_category():
     root = make_category(depth=0)
     child = make_category(depth=1, parent_id=root.id)
     repo = FakeCategoryRepository([root, child])
-    grandchild = CreateCategoryUseCase(repo).execute(
-        name="Classic Rock", slug="classic-rock", parent_id=child.id
-    )
+    grandchild = CreateCategoryUseCase(repo).execute(name="Classic Rock", slug="classic-rock", parent_id=child.id)
     assert grandchild.depth == 2
 
 
@@ -61,9 +59,7 @@ def test_create_beyond_max_depth_raises():
     grandchild = make_category(depth=2, parent_id=child.id)
     repo = FakeCategoryRepository([root, child, grandchild])
     with pytest.raises(CategoryDepthExceededError):
-        CreateCategoryUseCase(repo).execute(
-            name="Too Deep", slug="too-deep", parent_id=grandchild.id
-        )
+        CreateCategoryUseCase(repo).execute(name="Too Deep", slug="too-deep", parent_id=grandchild.id)
 
 
 def test_create_category_parent_not_found_raises():

@@ -34,9 +34,7 @@ class CompleteEventUseCase:
             raise EventNotOwnedError("You are not the organiser of this event.")
 
         if event.status not in self._ALLOWED_FROM:
-            raise InvalidEventStatusTransitionError(
-                f"Cannot complete an event with status '{event.status}'."
-            )
+            raise InvalidEventStatusTransitionError(f"Cannot complete an event with status '{event.status}'.")
 
         event.status = "completed"
         event.updated_at = datetime.now(timezone.utc)
