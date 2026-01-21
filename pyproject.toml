@@ -12,6 +12,7 @@ dependencies = [
     "python-decouple",
     "gunicorn",
     "redis",
+    "celery[redis]>=5.4",
     "pika",
     "drf-spectacular",
     "boto3>=1.43.9",
