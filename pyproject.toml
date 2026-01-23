@@ -12,6 +12,7 @@ dependencies = [
     "python-decouple",
     "gunicorn",
     "redis",
+    "cryptography>=42.0.0",
     "celery[redis]>=5.4",
     "pika",
     "drf-spectacular",
