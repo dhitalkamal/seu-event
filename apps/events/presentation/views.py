@@ -831,7 +831,7 @@ class AdminEventAnalyticsView(APIView):
         top_events = list(
             EventModel.objects.filter(registered_count__gt=0)
             .order_by("-registered_count")[:10]
-            .values("id", "title", "organisation_id", "registered_count", "status", "event_type")
+            .values("id", "title", "organisation_id", "registered_count", "status", "visibility")
         )
 
         return success_response(
