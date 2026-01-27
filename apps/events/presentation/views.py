@@ -560,14 +560,24 @@ class CategoryListCreateView(APIView):
     )
     def post(self, request: Request) -> Response:
         """Validate payload and persist the new category."""
+        from django.db import IntegrityError
+
         ser = CreateCategorySerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         d = ser.validated_data
-        entity = _CREATE_CAT_UC(DjangoCategoryRepository()).execute(
-            name=d["name"],
-            slug=d["slug"],
-            parent_id=d.get("parent_id"),
-        )
+        try:
+            entity = _CREATE_CAT_UC(DjangoCategoryRepository()).execute(
+                name=d["name"],
+                slug=d["slug"],
+                parent_id=d.get("parent_id"),
+            )
+        except IntegrityError:
+            return error_response(
+                code="ERR_DUPLICATE",
+                message=f"Category with slug '{d['slug']}' already exists.",
+                http_status=409,
+                request=request,
+            )
         return created_response(CategoryResponseSerializer(entity).data, request=request)
 
 
@@ -609,13 +619,23 @@ class TagListCreateView(APIView):
     )
     def post(self, request: Request) -> Response:
         """Validate payload and persist the new tag."""
+        from django.db import IntegrityError
+
         ser = CreateTagSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         d = ser.validated_data
-        entity = _CREATE_TAG_UC(DjangoTagRepository()).execute(
-            name=d["name"],
-            slug=d["slug"],
-        )
+        try:
+            entity = _CREATE_TAG_UC(DjangoTagRepository()).execute(
+                name=d["name"],
+                slug=d["slug"],
+            )
+        except IntegrityError:
+            return error_response(
+                code="ERR_DUPLICATE",
+                message=f"Tag with slug '{d['slug']}' already exists.",
+                http_status=409,
+                request=request,
+            )
         return created_response(TagResponseSerializer(entity).data, request=request)
 
 
