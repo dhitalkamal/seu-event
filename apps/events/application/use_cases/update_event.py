@@ -46,6 +46,9 @@ class UpdateEventUseCase:
         venue_id: uuid.UUID | None = None,
         latitude: Decimal | None = None,
         longitude: Decimal | None = None,
+        event_mode: str | None = None,
+        virtual_capacity: int | None = None,
+        overbooking_percent: int | None = None,
     ) -> EventEntity:
         """
         Apply only the provided (non-None) fields and persist.
@@ -125,6 +128,12 @@ class UpdateEventUseCase:
             event.latitude = latitude
         if longitude is not None:
             event.longitude = longitude
+        if event_mode is not None:
+            event.event_mode = event_mode
+        if virtual_capacity is not None:
+            event.virtual_capacity = virtual_capacity
+        if overbooking_percent is not None:
+            event.overbooking_percent = overbooking_percent
 
         event.updated_at = datetime.now(timezone.utc)
         return self._events.update(event)

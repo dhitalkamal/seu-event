@@ -95,6 +95,11 @@ class Event(models.Model):
         PRIVATE = "private", "Private"
         UNLISTED = "unlisted", "Unlisted"
 
+    class EventMode(models.TextChoices):
+        PHYSICAL = "physical", "Physical"
+        VIRTUAL = "virtual", "Virtual"
+        HYBRID = "hybrid", "Hybrid"
+
     class Meta:
         db_table = '"events"."event"'
 
@@ -116,6 +121,16 @@ class Event(models.Model):
     cover_image = models.URLField(max_length=2048, null=True, blank=True)
     is_online = models.BooleanField(default=False)
     online_url = models.URLField(max_length=2048, null=True, blank=True)
+    # event_mode supersedes is_online for new events
+    event_mode = models.CharField(
+        max_length=20,
+        choices=EventMode.choices,
+        default=EventMode.PHYSICAL,
+    )
+    # extra capacity for hybrid events (online attendees)
+    virtual_capacity = models.PositiveIntegerField(null=True, blank=True)
+    # allow registrations beyond capacity by this percentage (0 = strict)
+    overbooking_percent = models.PositiveSmallIntegerField(default=0)
     category = models.ForeignKey(
         Category,
         null=True,
@@ -167,6 +182,9 @@ class Event(models.Model):
             venue_id=self.venue_id,
             latitude=self.latitude,
             longitude=self.longitude,
+            event_mode=self.event_mode,
+            virtual_capacity=self.virtual_capacity,
+            overbooking_percent=self.overbooking_percent,
         )
 
     @classmethod
@@ -197,6 +215,9 @@ class Event(models.Model):
             venue_id=entity.venue_id,
             latitude=entity.latitude,
             longitude=entity.longitude,
+            event_mode=entity.event_mode,
+            virtual_capacity=entity.virtual_capacity,
+            overbooking_percent=entity.overbooking_percent,
         )
 
 

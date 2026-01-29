@@ -64,8 +64,24 @@ class EventEntity:
     venue_id: uuid.UUID | None = None
     latitude: Decimal | None = None
     longitude: Decimal | None = None
+    # ! event_mode replaces the boolean is_online; physical / virtual / hybrid
+    event_mode: str = "physical"
+    # extra capacity for hybrid events (online attendees); None means unlimited or not applicable
+    virtual_capacity: int | None = None
+    # overbooking allowance as a percentage (0 = no overbooking)
+    overbooking_percent: int = 0
 
     @property
     def is_at_capacity(self) -> bool:
-        """True when no spots remain."""
-        return self.registered_count >= self.capacity
+        """True when no spots remain.
+
+        For hybrid events the effective capacity is physical + virtual.
+        For all other modes it is just capacity.
+        Overbooking percent is applied on top of the effective capacity.
+        """
+        if self.event_mode == "hybrid" and self.virtual_capacity is not None:
+            effective = self.capacity + self.virtual_capacity
+        else:
+            effective = self.capacity
+        effective_with_overbooking = effective * (1 + self.overbooking_percent / 100.0)
+        return self.registered_count >= effective_with_overbooking

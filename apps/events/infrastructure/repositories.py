@@ -103,6 +103,9 @@ class DjangoEventRepository(IEventRepository):
         obj.category_id = entity.category_id
         obj.allowed_domains = entity.allowed_domains
         obj.deleted_at = entity.deleted_at
+        obj.event_mode = entity.event_mode
+        obj.virtual_capacity = entity.virtual_capacity
+        obj.overbooking_percent = entity.overbooking_percent
         obj.save()
         obj.tags.set(entity.tag_ids)
         return obj.to_entity()

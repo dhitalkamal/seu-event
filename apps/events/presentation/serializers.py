@@ -29,6 +29,10 @@ class CreateEventSerializer(serializers.Serializer):
     organisation_id = serializers.UUIDField(required=False, allow_null=True)
     # primary USP: list of email domains; empty means no restriction
     allowed_domains = serializers.ListField(child=serializers.CharField(max_length=253), required=False, default=list)
+    # hybrid event fields
+    event_mode = serializers.ChoiceField(choices=["physical", "virtual", "hybrid"], default="physical")
+    virtual_capacity = serializers.IntegerField(min_value=1, required=False, allow_null=True)
+    overbooking_percent = serializers.IntegerField(min_value=0, max_value=100, default=0)
 
 
 class UpdateEventSerializer(serializers.Serializer):
@@ -52,6 +56,10 @@ class UpdateEventSerializer(serializers.Serializer):
     category_id = serializers.UUIDField(required=False, allow_null=True)
     tag_ids = serializers.ListField(child=serializers.UUIDField(), required=False)
     allowed_domains = serializers.ListField(child=serializers.CharField(max_length=253), required=False)
+    # hybrid event fields (all optional on update)
+    event_mode = serializers.ChoiceField(choices=["physical", "virtual", "hybrid"], required=False)
+    virtual_capacity = serializers.IntegerField(min_value=1, required=False, allow_null=True)
+    overbooking_percent = serializers.IntegerField(min_value=0, max_value=100, required=False)
 
 
 class EventMediaSerializer(serializers.Serializer):
@@ -156,3 +164,6 @@ class EventResponseSerializer(serializers.Serializer):
     allowed_domains = serializers.ListField(child=serializers.CharField())
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()
+    event_mode = serializers.CharField()
+    virtual_capacity = serializers.IntegerField(allow_null=True)
+    overbooking_percent = serializers.IntegerField()

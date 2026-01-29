@@ -286,6 +286,9 @@ class CreateEventView(APIView):
             tag_ids=d.get("tag_ids", []),
             allowed_domains=d.get("allowed_domains", []),
             organisation_id=d.get("organisation_id"),
+            event_mode=d.get("event_mode", "physical"),
+            virtual_capacity=d.get("virtual_capacity"),
+            overbooking_percent=d.get("overbooking_percent", 0),
         )
         return created_response(EventResponseSerializer(entity).data, request=request)
 
