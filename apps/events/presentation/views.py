@@ -239,6 +239,10 @@ class CreateEventView(APIView):
             date_to=f.get("date_to"),
             location=f.get("location"),
             user_email_domain=user_email_domain,
+            lat=f.get("lat"),
+            lng=f.get("lng"),
+            radius_km=f.get("radius_km"),
+            sort_by=f.get("sort_by"),
         )
         paginator = _PAGINATION_CLASS()
         page = paginator.paginate_queryset(events, request)

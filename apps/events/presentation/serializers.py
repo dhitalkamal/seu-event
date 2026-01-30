@@ -97,6 +97,12 @@ class EventFilterSerializer(serializers.Serializer):
     location = serializers.CharField(required=False, max_length=255)
     date_from = serializers.DateTimeField(required=False)
     date_to = serializers.DateTimeField(required=False)
+    # location-based filtering; all three must be provided together to activate radius filter
+    lat = serializers.FloatField(required=False, allow_null=True)
+    lng = serializers.FloatField(required=False, allow_null=True)
+    radius_km = serializers.FloatField(required=False, allow_null=True, min_value=0.1)
+    # sort order: date | popularity | distance (distance requires lat+lng)
+    sort_by = serializers.ChoiceField(choices=["date", "popularity", "distance"], required=False, allow_null=True)
 
 
 class CreateCategorySerializer(serializers.Serializer):
