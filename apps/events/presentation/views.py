@@ -227,6 +227,12 @@ class EventDetailView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    def get_permissions(self) -> list:
+        """Allow anyone to read event details; require auth to modify."""
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
     @extend_schema(
         tags=["Events"],
         summary="Get event by id",
