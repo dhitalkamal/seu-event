@@ -16,9 +16,11 @@ from apps.common.api.pagination import StandardPagination
 from apps.common.api.responses import created_response, error_response, success_response
 from apps.common.health import check_database, check_rabbitmq, check_redis
 from apps.events.application.use_cases.complete_event import CompleteEventUseCase
+from apps.events.application.use_cases.create_category import CreateCategoryUseCase
 from apps.events.application.use_cases.create_event import CreateEventUseCase
 from apps.events.application.use_cases.delete_event import DeleteEventUseCase
 from apps.events.application.use_cases.get_event import GetEventUseCase
+from apps.events.application.use_cases.list_categories import ListCategoriesUseCase
 from apps.events.application.use_cases.list_events import ListEventsUseCase
 from apps.events.application.use_cases.list_my_events import ListMyEventsUseCase
 from apps.events.application.use_cases.publish_event import PublishEventUseCase
@@ -26,14 +28,21 @@ from apps.events.application.use_cases.update_event import UpdateEventUseCase
 from apps.events.application.use_cases.update_registration_count import (
     UpdateRegistrationCountUseCase,
 )
-from apps.events.infrastructure.repositories import DjangoEventRepository
+from apps.events.infrastructure.repositories import (
+    DjangoEventRepository,
+)
 from apps.events.presentation.serializers import (
+    CategoryResponseSerializer,
+    CreateCategorySerializer,
     CreateEventSerializer,
     EventFilterSerializer,
     EventResponseSerializer,
     RegistrationCountSerializer,
     UpdateEventSerializer,
 )
+
+_CREATE_CAT_UC = CreateCategoryUseCase
+_LIST_CAT_UC = ListCategoriesUseCase
 
 # referenced below in CreateEventView.get() and EventMyView.get()
 _PAGINATION_CLASS = StandardPagination
@@ -406,3 +415,55 @@ class RegistrationCountView(APIView):
             delta=ser.validated_data["delta"],
         )
         return success_response({"updated": True}, request=request)
+
+
+class CategoryListCreateView(APIView):
+    """List all categories or create a new one."""
+
+    def get_permissions(self) -> list:
+        """Anyone can list; only authenticated users can create."""
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
+    @extend_schema(
+        tags=["Categories"],
+        summary="List all categories",
+        auth=[],
+        responses={
+            200: OpenApiResponse(
+                description="All categories.",
+                response=CategoryResponseSerializer(many=True),
+            ),
+        },
+    )
+    def get(self, request: Request) -> Response:
+        """Return all categories ordered by depth then name."""
+        categories = _LIST_CAT_UC(DjangoCategoryRepository()).execute()
+        return success_response(
+            CategoryResponseSerializer(categories, many=True).data, request=request
+        )
+
+    @extend_schema(
+        tags=["Categories"],
+        summary="Create a category",
+        request=CreateCategorySerializer,
+        responses={
+            201: OpenApiResponse(
+                description="Category created.", response=CategoryResponseSerializer
+            ),
+            401: OpenApiResponse(description="Missing or invalid JWT."),
+            422: OpenApiResponse(description="Validation error or depth limit exceeded."),
+        },
+    )
+    def post(self, request: Request) -> Response:
+        """Validate payload and persist the new category."""
+        ser = CreateCategorySerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        d = ser.validated_data
+        entity = _CREATE_CAT_UC(DjangoCategoryRepository()).execute(
+            name=d["name"],
+            slug=d["slug"],
+            parent_id=d.get("parent_id"),
+        )
+        return created_response(CategoryResponseSerializer(entity).data, request=request)

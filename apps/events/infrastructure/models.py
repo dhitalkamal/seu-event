@@ -7,7 +7,47 @@ from decimal import Decimal
 
 from django.db import models
 
-from apps.events.domain.entities import EventEntity
+from apps.events.domain.entities import CategoryEntity, EventEntity
+
+
+class Category(models.Model):
+    """Hierarchical event category. Self-referential FK; max 3 levels deep."""
+
+    class Meta:
+        db_table = '"events"."category"'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=120, unique=True)
+    parent = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="children",
+    )
+    depth = models.PositiveSmallIntegerField(default=0)
+
+    def to_entity(self) -> CategoryEntity:
+        """Map this ORM row to a CategoryEntity."""
+        return CategoryEntity(
+            id=self.id,
+            name=self.name,
+            slug=self.slug,
+            parent_id=self.parent_id,
+            depth=self.depth,
+        )
+
+    @classmethod
+    def from_entity(cls, entity: CategoryEntity) -> "Category":
+        """Build an unsaved ORM instance from a CategoryEntity."""
+        return cls(
+            id=entity.id,
+            name=entity.name,
+            slug=entity.slug,
+            parent_id=entity.parent_id,
+            depth=entity.depth,
+        )
 
 
 class Event(models.Model):

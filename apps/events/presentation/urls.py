@@ -5,6 +5,7 @@ from __future__ import annotations
 from django.urls import URLPattern, path
 
 from .views import (
+    CategoryListCreateView,
     CompleteEventView,
     CreateEventView,
     EventDetailView,
@@ -26,4 +27,5 @@ urlpatterns: list[URLPattern] = [
         RegistrationCountView.as_view(),
         name="event-registration-count",
     ),
+    path("categories/", CategoryListCreateView.as_view(), name="category-list-create"),
 ]

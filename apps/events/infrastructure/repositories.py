@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import uuid
 
-from apps.events.domain.entities import EventEntity
-from apps.events.domain.exceptions import EventNotFoundError
-from apps.events.domain.repositories import IEventRepository
-from apps.events.infrastructure.models import Event
+from apps.events.domain.entities import CategoryEntity, EventEntity
+from apps.events.domain.exceptions import CategoryNotFoundError, EventNotFoundError
+from apps.events.domain.repositories import ICategoryRepository, IEventRepository
+from apps.events.infrastructure.models import Category, Event
 
 
 class DjangoEventRepository(IEventRepository):
@@ -73,3 +73,24 @@ class DjangoEventRepository(IEventRepository):
                 deleted_at__isnull=True,
             ).order_by("-created_at")
         ]
+
+
+class DjangoCategoryRepository(ICategoryRepository):
+    """Persists Category entities using the Django ORM."""
+
+    def create(self, entity: CategoryEntity) -> CategoryEntity:
+        """Persist a new category and return the saved entity."""
+        obj = Category.from_entity(entity)
+        obj.save()
+        return obj.to_entity()
+
+    def get_by_id(self, category_id: object) -> CategoryEntity:
+        """Fetch by id. Raises CategoryNotFoundError if absent."""
+        try:
+            return Category.objects.get(id=category_id).to_entity()
+        except Category.DoesNotExist:
+            raise CategoryNotFoundError("Category not found.")
+
+    def list_all(self) -> list[CategoryEntity]:
+        """Return all categories ordered by depth then name."""
+        return [obj.to_entity() for obj in Category.objects.order_by("depth", "name")]

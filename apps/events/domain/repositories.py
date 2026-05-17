@@ -5,7 +5,20 @@ from __future__ import annotations
 import uuid
 from abc import ABC, abstractmethod
 
-from apps.events.domain.entities import EventEntity
+from apps.events.domain.entities import CategoryEntity, EventEntity
+
+
+class ICategoryRepository(ABC):
+    """Persistence contract for Category aggregates."""
+
+    @abstractmethod
+    def create(self, entity: CategoryEntity) -> CategoryEntity: ...
+
+    @abstractmethod
+    def get_by_id(self, category_id: uuid.UUID) -> CategoryEntity: ...
+
+    @abstractmethod
+    def list_all(self) -> list[CategoryEntity]: ...
 
 
 class IEventRepository(ABC):

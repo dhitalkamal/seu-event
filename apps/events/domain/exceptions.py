@@ -31,3 +31,17 @@ class EventDateError(DomainError):
 
     http_status = 422
     code = "ERR_EVENT_INVALID_DATES"
+
+
+class CategoryNotFoundError(DomainError):
+    """No category matches the given identifier."""
+
+    http_status = 404
+    code = "ERR_CATEGORY_NOT_FOUND"
+
+
+class CategoryDepthExceededError(DomainError):
+    """Category hierarchy exceeds the maximum allowed depth of 3 levels."""
+
+    http_status = 422
+    code = "ERR_CATEGORY_DEPTH_EXCEEDED"

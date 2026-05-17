@@ -54,6 +54,24 @@ class EventFilterSerializer(serializers.Serializer):
     search = serializers.CharField(required=False, max_length=255)
 
 
+class CreateCategorySerializer(serializers.Serializer):
+    """Payload for creating a new category."""
+
+    name = serializers.CharField(max_length=100)
+    slug = serializers.SlugField(max_length=120)
+    parent_id = serializers.UUIDField(required=False, allow_null=True)
+
+
+class CategoryResponseSerializer(serializers.Serializer):
+    """Public shape of a category resource."""
+
+    id = serializers.UUIDField()
+    name = serializers.CharField()
+    slug = serializers.CharField()
+    parent_id = serializers.UUIDField(allow_null=True)
+    depth = serializers.IntegerField()
+
+
 class RegistrationCountSerializer(serializers.Serializer):
     """Payload for incrementing or decrementing registered_count."""
 

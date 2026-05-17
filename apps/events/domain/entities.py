@@ -9,6 +9,17 @@ from decimal import Decimal
 
 
 @dataclass(slots=True)
+class CategoryEntity:
+    """A hierarchical event category. Maximum 3 levels deep (depth 0, 1, 2)."""
+
+    id: uuid.UUID
+    name: str
+    slug: str
+    depth: int
+    parent_id: uuid.UUID | None = None
+
+
+@dataclass(slots=True)
 class EventEntity:
     """A single event on the Sansaar platform."""
 

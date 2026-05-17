@@ -6,9 +6,9 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
-from apps.events.domain.entities import EventEntity
-from apps.events.domain.exceptions import EventNotFoundError
-from apps.events.domain.repositories import IEventRepository
+from apps.events.domain.entities import CategoryEntity, EventEntity
+from apps.events.domain.exceptions import CategoryNotFoundError, EventNotFoundError
+from apps.events.domain.repositories import ICategoryRepository, IEventRepository
 
 
 def _now() -> datetime:
@@ -91,3 +91,26 @@ class FakeEventRepository(IEventRepository):
             for e in self._store.values()
             if e.organiser_id == organiser_id and e.deleted_at is None
         ]
+
+
+class FakeCategoryRepository(ICategoryRepository):
+    """In-memory category store backed by a dict keyed on category.id."""
+
+    def __init__(self, categories: list[CategoryEntity] | None = None) -> None:
+        self._store: dict[uuid.UUID, CategoryEntity] = {c.id: c for c in (categories or [])}
+
+    def create(self, entity: CategoryEntity) -> CategoryEntity:
+        """Persist the entity and return it."""
+        self._store[entity.id] = entity
+        return entity
+
+    def get_by_id(self, category_id: uuid.UUID) -> CategoryEntity:
+        """Return the category or raise CategoryNotFoundError."""
+        entity = self._store.get(category_id)
+        if entity is None:
+            raise CategoryNotFoundError("Category not found.")
+        return entity
+
+    def list_all(self) -> list[CategoryEntity]:
+        """Return all stored categories."""
+        return list(self._store.values())
