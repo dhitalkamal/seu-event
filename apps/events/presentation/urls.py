@@ -4,7 +4,14 @@ from __future__ import annotations
 
 from django.urls import URLPattern, path
 
-from .views import CreateEventView, EventDetailView, EventMyView, HealthCheckView, PublishEventView
+from .views import (
+    CompleteEventView,
+    CreateEventView,
+    EventDetailView,
+    EventMyView,
+    HealthCheckView,
+    PublishEventView,
+)
 
 urlpatterns: list[URLPattern] = [
     path("health/", HealthCheckView.as_view(), name="health"),
@@ -12,4 +19,5 @@ urlpatterns: list[URLPattern] = [
     path("events/my/", EventMyView.as_view(), name="event-my"),
     path("events/<uuid:event_id>/", EventDetailView.as_view(), name="event-detail"),
     path("events/<uuid:event_id>/publish/", PublishEventView.as_view(), name="event-publish"),
+    path("events/<uuid:event_id>/complete/", CompleteEventView.as_view(), name="event-complete"),
 ]

@@ -15,6 +15,7 @@ from rest_framework.views import APIView
 from apps.common.api.pagination import StandardPagination
 from apps.common.api.responses import created_response, error_response, success_response
 from apps.common.health import check_database, check_rabbitmq, check_redis
+from apps.events.application.use_cases.complete_event import CompleteEventUseCase
 from apps.events.application.use_cases.create_event import CreateEventUseCase
 from apps.events.application.use_cases.delete_event import DeleteEventUseCase
 from apps.events.application.use_cases.get_event import GetEventUseCase
@@ -35,6 +36,7 @@ _PAGINATION_CLASS = StandardPagination
 _LIST_EVENTS_UC = ListEventsUseCase
 _LIST_MY_UC = ListMyEventsUseCase
 _FILTER_SER = EventFilterSerializer
+_COMPLETE_UC = CompleteEventUseCase
 
 _CHECKS = inline_serializer(
     name="DependencyChecks",
@@ -339,3 +341,29 @@ class EventMyView(APIView):
         paginator = _PAGINATION_CLASS()
         page = paginator.paginate_queryset(events, request)
         return paginator.get_paginated_response(EventResponseSerializer(page, many=True).data)
+
+
+class CompleteEventView(APIView):
+    """Transition a published event to completed status."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["Events"],
+        summary="Complete a published event",
+        request=None,
+        responses={
+            200: OpenApiResponse(description="Event completed.", response=EventResponseSerializer),
+            401: OpenApiResponse(description="Missing or invalid JWT."),
+            403: OpenApiResponse(description="Not the organiser."),
+            404: OpenApiResponse(description="Event not found."),
+            422: OpenApiResponse(description="Event is not in published status."),
+        },
+    )
+    def post(self, request: Request, event_id: uuid.UUID) -> Response:
+        """Mark the published event as completed."""
+        entity = _COMPLETE_UC(DjangoEventRepository()).execute(
+            event_id=event_id,
+            organiser_id=uuid.UUID(str(request.user.id)),
+        )
+        return success_response(EventResponseSerializer(entity).data, request=request)
