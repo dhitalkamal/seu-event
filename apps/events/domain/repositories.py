@@ -21,6 +21,9 @@ class ITagRepository(ABC):
     def get_by_id(self, tag_id: uuid.UUID) -> TagEntity: ...
 
     @abstractmethod
+    def increment_usage(self, tag_id: uuid.UUID) -> None: ...
+
+    @abstractmethod
     def list_all(self) -> list[TagEntity]: ...
 
 

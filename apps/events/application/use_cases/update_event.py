@@ -106,6 +106,7 @@ class UpdateEventUseCase:
                 self._tags = DjangoTagRepository()
             for tid in tag_ids:
                 self._tags.get_by_id(tid)
+                self._tags.increment_usage(tid)
             event.tag_ids = list(tag_ids)
 
         event.updated_at = datetime.now(timezone.utc)

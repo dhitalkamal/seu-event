@@ -81,6 +81,7 @@ class CreateEventUseCase:
                 self._tags = DjangoTagRepository()
             for tid in tag_ids:
                 self._tags.get_by_id(tid)
+                self._tags.increment_usage(tid)
                 resolved_tag_ids.append(tid)
 
         # * free events always have zero price regardless of submitted value

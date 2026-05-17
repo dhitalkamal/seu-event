@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import uuid
 
+from django.db import models
+
 from apps.events.domain.entities import CategoryEntity, EventEntity, TagEntity
 from apps.events.domain.exceptions import (
     CategoryNotFoundError,
@@ -40,6 +42,10 @@ class DjangoTagRepository(ITagRepository):
             return Tag.objects.get(id=tag_id).to_entity()
         except Tag.DoesNotExist:
             raise TagNotFoundError("Tag not found.")
+
+    def increment_usage(self, tag_id: object) -> None:
+        """Atomically increment usage_count by 1."""
+        Tag.objects.filter(id=tag_id).update(usage_count=models.F("usage_count") + 1)
 
     def list_all(self) -> list[TagEntity]:
         """Return all tags ordered by name."""

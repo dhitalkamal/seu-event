@@ -149,6 +149,16 @@ class FakeTagRepository(ITagRepository):
             raise TagNotFoundError("Tag not found.")
         return entity
 
+    def increment_usage(self, tag_id: uuid.UUID) -> None:
+        """Increment usage_count on the stored tag in place."""
+        tag = self.get_by_id(tag_id)
+        self._store[tag_id] = TagEntity(
+            id=tag.id,
+            name=tag.name,
+            slug=tag.slug,
+            usage_count=tag.usage_count + 1,
+        )
+
     def list_all(self) -> list[TagEntity]:
         """Return all stored tags."""
         return list(self._store.values())
