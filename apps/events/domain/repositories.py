@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 from apps.events.domain.entities import CategoryEntity, EventEntity, TagEntity
 
@@ -19,9 +20,6 @@ class ITagRepository(ABC):
 
     @abstractmethod
     def get_by_id(self, tag_id: uuid.UUID) -> TagEntity: ...
-
-    @abstractmethod
-    def increment_usage(self, tag_id: uuid.UUID) -> None: ...
 
     @abstractmethod
     def list_all(self) -> list[TagEntity]: ...
@@ -60,6 +58,10 @@ class IEventRepository(ABC):
         is_free: bool | None = None,
         search: str | None = None,
         category_id: uuid.UUID | None = None,
+        tag_id: uuid.UUID | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        location: str | None = None,
     ) -> list[EventEntity]: ...
 
     @abstractmethod

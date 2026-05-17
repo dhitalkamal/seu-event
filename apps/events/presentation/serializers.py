@@ -27,7 +27,7 @@ class CreateEventSerializer(serializers.Serializer):
 
 
 class UpdateEventSerializer(serializers.Serializer):
-    """Partial-update payload — every field is optional."""
+    """Partial-update payload: every field is optional."""
 
     title = serializers.CharField(max_length=255, required=False)
     description = serializers.CharField(required=False)
@@ -52,11 +52,15 @@ class EventFilterSerializer(serializers.Serializer):
 
     organiser_id = serializers.UUIDField(required=False)
     category_id = serializers.UUIDField(required=False)
+    tag_id = serializers.UUIDField(required=False)
     # NullBooleanField used intentionally: BooleanField treats a missing
     # QueryDict key as False (HTML checkbox semantics), which would silently
     # filter out all free events when no is_free param is provided.
     is_free = serializers.BooleanField(required=False, allow_null=True)
     search = serializers.CharField(required=False, max_length=255)
+    location = serializers.CharField(required=False, max_length=255)
+    date_from = serializers.DateTimeField(required=False)
+    date_to = serializers.DateTimeField(required=False)
 
 
 class CreateCategorySerializer(serializers.Serializer):

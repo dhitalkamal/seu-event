@@ -78,6 +78,10 @@ class FakeEventRepository(IEventRepository):
         is_free: bool | None = None,
         search: str | None = None,
         category_id: uuid.UUID | None = None,
+        tag_id: uuid.UUID | None = None,
+        date_from: object = None,
+        date_to: object = None,
+        location: str | None = None,
     ) -> list[EventEntity]:
         """Return published public non-deleted events, applying optional filters."""
         results = [
@@ -93,6 +97,14 @@ class FakeEventRepository(IEventRepository):
             results = [e for e in results if search.lower() in e.title.lower()]
         if category_id is not None:
             results = [e for e in results if e.category_id == category_id]
+        if tag_id is not None:
+            results = [e for e in results if tag_id in (e.tag_ids or [])]
+        if date_from is not None:
+            results = [e for e in results if e.start_date >= date_from]
+        if date_to is not None:
+            results = [e for e in results if e.start_date <= date_to]
+        if location is not None:
+            results = [e for e in results if location.lower() in e.location.lower()]
         return results
 
     def list_by_organiser(self, organiser_id: uuid.UUID) -> list[EventEntity]:

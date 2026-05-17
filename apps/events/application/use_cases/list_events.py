@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
 from apps.events.domain.entities import EventEntity
 from apps.events.domain.repositories import IEventRepository
@@ -21,6 +22,10 @@ class ListEventsUseCase:
         is_free: bool | None = None,
         search: str | None = None,
         category_id: uuid.UUID | None = None,
+        tag_id: uuid.UUID | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        location: str | None = None,
     ) -> list[EventEntity]:
         """Delegate filtering to the repository and return the matching events."""
         return self._events.list_public(
@@ -28,4 +33,8 @@ class ListEventsUseCase:
             is_free=is_free,
             search=search,
             category_id=category_id,
+            tag_id=tag_id,
+            date_from=date_from,
+            date_to=date_to,
+            location=location,
         )

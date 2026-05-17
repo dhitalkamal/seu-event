@@ -57,13 +57,59 @@ def test_list_events_returns_empty_when_no_matches():
     assert results == []
 
 
-def test_list_events_filter_by_category_id():
-    """Filtering by category_id returns only events in that category."""
-    cat_id = uuid.uuid4()
-    in_cat = make_event(status="published", visibility="public", category_id=cat_id)
-    no_cat = make_event(status="published", visibility="public", category_id=None)
-    other_cat = make_event(status="published", visibility="public", category_id=uuid.uuid4())
-    repo = FakeEventRepository([in_cat, no_cat, other_cat])
-    results = ListEventsUseCase(repo).execute(category_id=cat_id)
+def test_list_events_filter_by_tag_id():
+    """Filtering by tag_id returns only events that include the given tag."""
+    from datetime import datetime, timedelta, timezone
+
+    tag_id = uuid.uuid4()
+    now = datetime.now(timezone.utc)
+    with_tag = make_event(
+        status="published",
+        visibility="public",
+        tag_ids=[tag_id],
+        start_date=now + timedelta(days=1),
+        end_date=now + timedelta(days=2),
+    )
+    without_tag = make_event(
+        status="published",
+        visibility="public",
+        start_date=now + timedelta(days=1),
+        end_date=now + timedelta(days=2),
+    )
+    repo = FakeEventRepository([with_tag, without_tag])
+    results = ListEventsUseCase(repo).execute(tag_id=tag_id)
     assert len(results) == 1
-    assert results[0].id == in_cat.id
+    assert results[0].id == with_tag.id
+
+
+def test_list_events_filter_by_date_from():
+    """Filtering by date_from excludes events that start before the given date."""
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(timezone.utc)
+    future = make_event(
+        status="published",
+        visibility="public",
+        start_date=now + timedelta(days=10),
+        end_date=now + timedelta(days=11),
+    )
+    past = make_event(
+        status="published",
+        visibility="public",
+        start_date=now - timedelta(days=1),
+        end_date=now + timedelta(days=1),
+    )
+    repo = FakeEventRepository([future, past])
+    results = ListEventsUseCase(repo).execute(date_from=now + timedelta(days=5))
+    assert len(results) == 1
+    assert results[0].id == future.id
+
+
+def test_list_events_filter_by_location():
+    """Filtering by location returns only events with matching location."""
+    kathmandu = make_event(status="published", visibility="public", location="Kathmandu, Nepal")
+    pokhara = make_event(status="published", visibility="public", location="Pokhara, Nepal")
+    repo = FakeEventRepository([kathmandu, pokhara])
+    results = ListEventsUseCase(repo).execute(location="kathmandu")
+    assert len(results) == 1
+    assert results[0].id == kathmandu.id

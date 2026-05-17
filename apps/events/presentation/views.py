@@ -47,46 +47,6 @@ from apps.events.presentation.serializers import (
     UpdateEventSerializer,
 )
 
-# shared schema building blocks
-_META = inline_serializer(
-    name="EventResponseMeta",
-    fields={
-        "request_id": serializers.CharField(),
-        "timestamp": serializers.CharField(),
-    },
-)
-
-_ERROR_ENVELOPE = inline_serializer(
-    name="EventErrorEnvelope",
-    fields={
-        "data": serializers.JSONField(allow_null=True, default=None),
-        "error": inline_serializer(
-            name="EventErrorEnvelopeBody",
-            fields={
-                "code": serializers.CharField(help_text="Machine-readable error code."),
-                "message": serializers.CharField(help_text="Human-readable error description."),
-                "details": serializers.JSONField(
-                    allow_null=True,
-                    help_text="Extra context: flat list of {field, message} for validation errors.",
-                ),
-            },
-        ),
-        "meta": _META,
-    },
-)
-
-_MSG_ENVELOPE = inline_serializer(
-    name="EventMessageEnvelope",
-    fields={
-        "data": inline_serializer(
-            name="EventMessageData",
-            fields={"message": serializers.CharField()},
-        ),
-        "error": serializers.JSONField(allow_null=True, default=None),
-        "meta": _META,
-    },
-)
-
 # anchor variables keep use-case and serializer imports alive through ruff
 _PAGINATION_CLASS = StandardPagination
 _LIST_EVENTS_UC = ListEventsUseCase
@@ -100,47 +60,19 @@ _CREATE_TAG_UC = CreateTagUseCase
 _LIST_TAG_UC = ListTagsUseCase
 
 _CHECKS = inline_serializer(
-    name="EventDependencyChecks",
+    name="DependencyChecks",
     fields={
         "database": serializers.ChoiceField(choices=["healthy", "unhealthy"]),
         "redis": serializers.ChoiceField(choices=["healthy", "unhealthy"]),
         "rabbitmq": serializers.ChoiceField(choices=["healthy", "unhealthy"]),
     },
 )
-
-_PAGINATED_EVENTS = inline_serializer(
-    name="PaginatedEventList",
+_META_SCHEMA = inline_serializer(
+    name="ResponseMeta",
     fields={
-        "count": serializers.IntegerField(help_text="Total number of matching events."),
-        "next": serializers.URLField(allow_null=True, help_text="URL of the next page, or null."),
-        "previous": serializers.URLField(
-            allow_null=True, help_text="URL of the previous page, or null."
-        ),
-        "results": EventResponseSerializer(many=True),
+        "request_id": serializers.CharField(),
+        "timestamp": serializers.CharField(),
     },
-)
-
-# reusable per-status OpenApiResponse objects
-_R401 = OpenApiResponse(
-    description="Authentication credentials are missing or invalid.",
-    response=_ERROR_ENVELOPE,
-)
-_R403 = OpenApiResponse(
-    description="You are not the organiser of this event.",
-    response=_ERROR_ENVELOPE,
-)
-_R404 = OpenApiResponse(
-    description="Event not found.",
-    response=_ERROR_ENVELOPE,
-)
-_R422 = OpenApiResponse(
-    description="Payload failed validation or a business rule was violated. "
-    "details contains a flat list of {field, message} objects.",
-    response=_ERROR_ENVELOPE,
-)
-_R503 = OpenApiResponse(
-    description="One or more dependencies are unavailable.",
-    response=_ERROR_ENVELOPE,
 )
 
 
@@ -162,10 +94,10 @@ class HealthCheckView(APIView):
             200: OpenApiResponse(
                 description="All dependencies are healthy.",
                 response=inline_serializer(
-                    name="EventHealthSuccessEnvelope",
+                    name="HealthyResponse",
                     fields={
                         "data": inline_serializer(
-                            name="EventHealthData",
+                            name="HealthyData",
                             fields={
                                 "service": serializers.CharField(),
                                 "status": serializers.CharField(),
@@ -173,12 +105,29 @@ class HealthCheckView(APIView):
                                 "checks": _CHECKS,
                             },
                         ),
-                        "error": serializers.JSONField(allow_null=True, default=None),
-                        "meta": _META,
+                        "error": serializers.JSONField(allow_null=True),
+                        "meta": _META_SCHEMA,
                     },
                 ),
             ),
-            503: _R503,
+            503: OpenApiResponse(
+                description="One or more dependencies are unavailable.",
+                response=inline_serializer(
+                    name="UnhealthyResponse",
+                    fields={
+                        "data": serializers.JSONField(allow_null=True),
+                        "error": inline_serializer(
+                            name="HealthError",
+                            fields={
+                                "code": serializers.CharField(),
+                                "message": serializers.CharField(),
+                                "details": serializers.JSONField(allow_null=True),
+                            },
+                        ),
+                        "meta": _META_SCHEMA,
+                    },
+                ),
+            ),
         },
     )
     def get(self, request: Request) -> Response:
@@ -202,7 +151,9 @@ class HealthCheckView(APIView):
             if v is not None
         }
 
-        if all(s == "healthy" for s in checks.values()):
+        all_healthy = all(s == "healthy" for s in checks.values())
+
+        if all_healthy:
             return success_response(
                 {
                     "service": settings.SERVICE_NAME,
@@ -223,7 +174,7 @@ class HealthCheckView(APIView):
 
 
 class CreateEventView(APIView):
-    """List published public events or create a new draft event."""
+    """List published public events or create a new event."""
 
     permission_classes = [IsAuthenticated]
 
@@ -236,32 +187,30 @@ class CreateEventView(APIView):
     @extend_schema(
         tags=["Events"],
         summary="List published public events",
-        description=(
-            "Returns a paginated list of published public events. "
-            "Optionally filter by organiser_id, is_free, or title search."
-        ),
-        auth=[],
-        parameters=[EventFilterSerializer],
+        parameters=[_FILTER_SER],
         responses={
             200: OpenApiResponse(
                 description="Paginated list of published public events.",
-                response=_PAGINATED_EVENTS,
+                response=EventResponseSerializer(many=True),
             ),
-            422: _R422,
         },
     )
     def get(self, request: Request) -> Response:
         """Return paginated published public events with optional filters."""
-        filter_ser = EventFilterSerializer(data=request.query_params)
+        filter_ser = _FILTER_SER(data=request.query_params)
         filter_ser.is_valid(raise_exception=True)
         f = filter_ser.validated_data
-        events = ListEventsUseCase(DjangoEventRepository()).execute(
+        events = _LIST_EVENTS_UC(DjangoEventRepository()).execute(
             organiser_id=f.get("organiser_id"),
-            category_id=f.get("category_id"),
             is_free=f.get("is_free"),
             search=f.get("search"),
+            category_id=f.get("category_id"),
+            tag_id=f.get("tag_id"),
+            date_from=f.get("date_from"),
+            date_to=f.get("date_to"),
+            location=f.get("location"),
         )
-        paginator = StandardPagination()
+        paginator = _PAGINATION_CLASS()
         page = paginator.paginate_queryset(events, request)
         return paginator.get_paginated_response(EventResponseSerializer(page, many=True).data)
 
@@ -269,25 +218,15 @@ class CreateEventView(APIView):
         tags=["Events"],
         summary="Create a new event",
         description=(
-            "Creates an event in DRAFT status owned by the authenticated user. "
-            "The organiser_id is inferred from the JWT — do not include it in the body. "
-            "Call POST /events/{id}/publish/ to make the event publicly visible."
+            "Creates an event in DRAFT status. "
+            "The organiser is inferred from the JWT - no organiser_id in the request body. "
+            "Returns 422 if the payload fails validation or dates are invalid."
         ),
         request=CreateEventSerializer,
         responses={
-            201: OpenApiResponse(
-                description="Event created in DRAFT status.",
-                response=inline_serializer(
-                    name="EventCreateEnvelope",
-                    fields={
-                        "data": EventResponseSerializer(),
-                        "error": serializers.JSONField(allow_null=True, default=None),
-                        "meta": _META,
-                    },
-                ),
-            ),
-            401: _R401,
-            422: _R422,
+            201: OpenApiResponse(description="Event created.", response=EventResponseSerializer),
+            401: OpenApiResponse(description="Missing or invalid JWT."),
+            422: OpenApiResponse(description="Validation error or invalid dates."),
         },
     )
     def post(self, request: Request) -> Response:
@@ -332,58 +271,32 @@ class EventDetailView(APIView):
 
     @extend_schema(
         tags=["Events"],
-        summary="Get event by ID",
-        description="Returns the full detail of a single event. Accessible without authentication.",
-        auth=[],
+        summary="Get event by id",
         responses={
-            200: OpenApiResponse(
-                description="Event detail.",
-                response=inline_serializer(
-                    name="EventGetEnvelope",
-                    fields={
-                        "data": EventResponseSerializer(),
-                        "error": serializers.JSONField(allow_null=True, default=None),
-                        "meta": _META,
-                    },
-                ),
-            ),
-            404: _R404,
+            200: OpenApiResponse(description="Event found.", response=EventResponseSerializer),
+            401: OpenApiResponse(description="Missing or invalid JWT."),
+            404: OpenApiResponse(description="Event not found."),
         },
     )
     def get(self, request: Request, event_id: uuid.UUID) -> Response:
-        """Return the event matching the given ID."""
+        """Return the event matching the given id."""
         entity = GetEventUseCase(DjangoEventRepository()).execute(event_id=event_id)
         return success_response(EventResponseSerializer(entity).data, request=request)
 
     @extend_schema(
         tags=["Events"],
-        summary="Update an event",
-        description=(
-            "Partially update any field on an event. Only the organiser can update. "
-            "Only provided fields are changed; omitted fields retain their current values. "
-            "Start/end date changes are re-validated against business rules."
-        ),
+        summary="Partially update an event",
         request=UpdateEventSerializer,
         responses={
-            200: OpenApiResponse(
-                description="Updated event.",
-                response=inline_serializer(
-                    name="EventPatchEnvelope",
-                    fields={
-                        "data": EventResponseSerializer(),
-                        "error": serializers.JSONField(allow_null=True, default=None),
-                        "meta": _META,
-                    },
-                ),
-            ),
-            401: _R401,
-            403: _R403,
-            404: _R404,
-            422: _R422,
+            200: OpenApiResponse(description="Event updated.", response=EventResponseSerializer),
+            401: OpenApiResponse(description="Missing or invalid JWT."),
+            403: OpenApiResponse(description="Not the organiser."),
+            404: OpenApiResponse(description="Event not found."),
+            422: OpenApiResponse(description="Validation error or invalid dates."),
         },
     )
     def patch(self, request: Request, event_id: uuid.UUID) -> Response:
-        """Apply a partial update to the event."""
+        """Apply a partial update to the event. Only provided fields are changed."""
         ser = UpdateEventSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         entity = UpdateEventUseCase(
@@ -399,21 +312,16 @@ class EventDetailView(APIView):
 
     @extend_schema(
         tags=["Events"],
-        summary="Delete an event",
-        description=(
-            "Soft-deletes the event by setting status=cancelled and recording deleted_at. "
-            "Only the organiser can delete. "
-            "Deleted events are excluded from all listing endpoints."
-        ),
+        summary="Soft-delete an event",
         responses={
-            204: OpenApiResponse(description="Event deleted successfully. No response body."),
-            401: _R401,
-            403: _R403,
-            404: _R404,
+            204: OpenApiResponse(description="Event deleted."),
+            401: OpenApiResponse(description="Missing or invalid JWT."),
+            403: OpenApiResponse(description="Not the organiser."),
+            404: OpenApiResponse(description="Event not found."),
         },
     )
     def delete(self, request: Request, event_id: uuid.UUID) -> Response:
-        """Soft-delete the event."""
+        """Soft-delete the event by setting deleted_at and status=cancelled."""
         DeleteEventUseCase(DjangoEventRepository()).execute(
             event_id=event_id,
             organiser_id=uuid.UUID(str(request.user.id)),
@@ -428,30 +336,14 @@ class PublishEventView(APIView):
 
     @extend_schema(
         tags=["Events"],
-        summary="Publish an event",
-        description=(
-            "Transitions the event from DRAFT to PUBLISHED, making it publicly visible. "
-            "Only the organiser can publish. "
-            "Returns 422 if the event is not in DRAFT status, "
-            "or if start_date is in the past."
-        ),
+        summary="Publish a draft event",
         request=None,
         responses={
-            200: OpenApiResponse(
-                description="Event published and now publicly visible.",
-                response=inline_serializer(
-                    name="EventPublishEnvelope",
-                    fields={
-                        "data": EventResponseSerializer(),
-                        "error": serializers.JSONField(allow_null=True, default=None),
-                        "meta": _META,
-                    },
-                ),
-            ),
-            401: _R401,
-            403: _R403,
-            404: _R404,
-            422: _R422,
+            200: OpenApiResponse(description="Event published.", response=EventResponseSerializer),
+            401: OpenApiResponse(description="Missing or invalid JWT."),
+            403: OpenApiResponse(description="Not the organiser."),
+            404: OpenApiResponse(description="Event not found."),
+            422: OpenApiResponse(description="Invalid status transition or past start date."),
         },
     )
     def post(self, request: Request, event_id: uuid.UUID) -> Response:
@@ -471,24 +363,20 @@ class EventMyView(APIView):
     @extend_schema(
         tags=["Events"],
         summary="List my events",
-        description=(
-            "Returns a paginated list of all non-deleted events owned by the authenticated user, "
-            "across all statuses (draft, published, cancelled, completed). "
-            "Ordered by most recently created first."
-        ),
+        description="Returns all non-deleted events owned by the authenticated organiser.",
         responses={
             200: OpenApiResponse(
                 description="Paginated list of own events.",
-                response=_PAGINATED_EVENTS,
+                response=EventResponseSerializer(many=True),
             ),
-            401: _R401,
+            401: OpenApiResponse(description="Missing or invalid JWT."),
         },
     )
     def get(self, request: Request) -> Response:
         """Return paginated list of own events."""
         organiser_id = uuid.UUID(str(request.user.id))
-        events = ListMyEventsUseCase(DjangoEventRepository()).execute(organiser_id=organiser_id)
-        paginator = StandardPagination()
+        events = _LIST_MY_UC(DjangoEventRepository()).execute(organiser_id=organiser_id)
+        paginator = _PAGINATION_CLASS()
         page = paginator.paginate_queryset(events, request)
         return paginator.get_paginated_response(EventResponseSerializer(page, many=True).data)
 
@@ -601,62 +489,6 @@ class CategoryListCreateView(APIView):
             parent_id=d.get("parent_id"),
         )
         return created_response(CategoryResponseSerializer(entity).data, request=request)
-
-
-class CoverImageUploadView(APIView):
-    """Upload a cover image to MinIO and return the public URL."""
-
-    permission_classes = [IsAuthenticated]
-
-    @extend_schema(
-        tags=["Uploads"],
-        summary="Upload cover image",
-        description="Accepts a multipart image file, stores it in MinIO, returns the URL for use in cover_image.",
-        request=inline_serializer(
-            name="CoverImageUploadRequest",
-            fields={"file": serializers.ImageField()},
-        ),
-        responses={
-            200: OpenApiResponse(
-                description="Upload successful.",
-                response=inline_serializer(
-                    name="CoverImageUploadResponse",
-                    fields={"url": serializers.URLField()},
-                ),
-            ),
-            400: OpenApiResponse(description="No file provided or invalid file type."),
-            401: OpenApiResponse(description="Missing or invalid JWT."),
-        },
-    )
-    def post(self, request: Request) -> Response:
-        """Upload the image file and return its public MinIO URL."""
-        from apps.events.infrastructure.storage import upload_image
-
-        file = request.FILES.get("file")
-        if not file:
-            return error_response(
-                code="ERR_EVENT_NO_FILE",
-                message="No file provided.",
-                http_status=400,
-                request=request,
-            )
-
-        content_type = file.content_type or "application/octet-stream"
-        if not content_type.startswith("image/"):
-            return error_response(
-                code="ERR_EVENT_INVALID_FILE_TYPE",
-                message="Only image files are accepted.",
-                http_status=400,
-                request=request,
-            )
-
-        extension = content_type.split("/")[-1].replace("jpeg", "jpg")
-        url = upload_image(
-            file_data=file.read(),
-            content_type=content_type,
-            extension=extension,
-        )
-        return success_response({"url": url}, request=request)
 
 
 class TagListCreateView(APIView):

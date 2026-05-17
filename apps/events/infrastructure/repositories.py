@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import uuid
 
-from django.db import models
-
 from apps.events.domain.entities import CategoryEntity, EventEntity, TagEntity
 from apps.events.domain.exceptions import (
     CategoryNotFoundError,
@@ -42,10 +40,6 @@ class DjangoTagRepository(ITagRepository):
             return Tag.objects.get(id=tag_id).to_entity()
         except Tag.DoesNotExist:
             raise TagNotFoundError("Tag not found.")
-
-    def increment_usage(self, tag_id: object) -> None:
-        """Atomically increment usage_count by 1."""
-        Tag.objects.filter(id=tag_id).update(usage_count=models.F("usage_count") + 1)
 
     def list_all(self) -> list[TagEntity]:
         """Return all tags ordered by name."""
@@ -119,6 +113,10 @@ class DjangoEventRepository(IEventRepository):
         is_free: bool | None = None,
         search: str | None = None,
         category_id: uuid.UUID | None = None,
+        tag_id: uuid.UUID | None = None,
+        date_from: object = None,
+        date_to: object = None,
+        location: str | None = None,
     ) -> list[EventEntity]:
         """Return published public non-deleted events, applying optional filters."""
         qs = Event.objects.filter(
@@ -134,6 +132,14 @@ class DjangoEventRepository(IEventRepository):
             qs = qs.filter(title__icontains=search)
         if category_id is not None:
             qs = qs.filter(category_id=category_id)
+        if tag_id is not None:
+            qs = qs.filter(tags__id=tag_id)
+        if date_from is not None:
+            qs = qs.filter(start_date__gte=date_from)
+        if date_to is not None:
+            qs = qs.filter(start_date__lte=date_to)
+        if location is not None:
+            qs = qs.filter(location__icontains=location)
         return [obj.to_entity() for obj in qs.order_by("-created_at")]
 
     def list_by_organiser(self, organiser_id: uuid.UUID) -> list[EventEntity]:
