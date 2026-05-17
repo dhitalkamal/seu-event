@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from apps.events.domain.entities import EventEntity
+from apps.events.domain.exceptions import EventNotFoundError
 from apps.events.domain.repositories import IEventRepository
 
 
@@ -47,5 +48,17 @@ class FakeEventRepository(IEventRepository):
 
     def create(self, entity: EventEntity) -> EventEntity:
         """Persist the entity and return it."""
+        self._store[entity.id] = entity
+        return entity
+
+    def get_by_id(self, event_id: uuid.UUID) -> EventEntity:
+        """Return the event or raise EventNotFoundError. Excludes soft-deleted events."""
+        entity = self._store.get(event_id)
+        if entity is None or entity.deleted_at is not None:
+            raise EventNotFoundError("Event not found.")
+        return entity
+
+    def update(self, entity: EventEntity) -> EventEntity:
+        """Overwrite the stored entity and return it."""
         self._store[entity.id] = entity
         return entity

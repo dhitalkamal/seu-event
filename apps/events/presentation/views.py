@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+
 from django.conf import settings
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import serializers
@@ -13,8 +15,16 @@ from rest_framework.views import APIView
 from apps.common.api.responses import created_response, error_response, success_response
 from apps.common.health import check_database, check_rabbitmq, check_redis
 from apps.events.application.use_cases.create_event import CreateEventUseCase
+from apps.events.application.use_cases.delete_event import DeleteEventUseCase
+from apps.events.application.use_cases.get_event import GetEventUseCase
+from apps.events.application.use_cases.publish_event import PublishEventUseCase
+from apps.events.application.use_cases.update_event import UpdateEventUseCase
 from apps.events.infrastructure.repositories import DjangoEventRepository
-from apps.events.presentation.serializers import CreateEventSerializer, EventResponseSerializer
+from apps.events.presentation.serializers import (
+    CreateEventSerializer,
+    EventResponseSerializer,
+    UpdateEventSerializer,
+)
 
 _CHECKS = inline_serializer(
     name="DependencyChecks",
@@ -157,7 +167,7 @@ class CreateEventView(APIView):
         d = ser.validated_data
 
         entity = CreateEventUseCase(DjangoEventRepository()).execute(
-            organiser_id=request.user.id,
+            organiser_id=uuid.UUID(str(request.user.id)),
             title=d["title"],
             description=d["description"],
             location=d["location"],
@@ -169,3 +179,90 @@ class CreateEventView(APIView):
             price=d["price"],
         )
         return created_response(EventResponseSerializer(entity).data, request=request)
+
+
+class EventDetailView(APIView):
+    """Retrieve, partially update, or soft-delete a single event."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["Events"],
+        summary="Get event by id",
+        responses={
+            200: OpenApiResponse(description="Event found.", response=EventResponseSerializer),
+            401: OpenApiResponse(description="Missing or invalid JWT."),
+            404: OpenApiResponse(description="Event not found."),
+        },
+    )
+    def get(self, request: Request, event_id: uuid.UUID) -> Response:
+        """Return the event matching the given id."""
+        entity = GetEventUseCase(DjangoEventRepository()).execute(event_id=event_id)
+        return success_response(EventResponseSerializer(entity).data, request=request)
+
+    @extend_schema(
+        tags=["Events"],
+        summary="Partially update an event",
+        request=UpdateEventSerializer,
+        responses={
+            200: OpenApiResponse(description="Event updated.", response=EventResponseSerializer),
+            401: OpenApiResponse(description="Missing or invalid JWT."),
+            403: OpenApiResponse(description="Not the organiser."),
+            404: OpenApiResponse(description="Event not found."),
+            422: OpenApiResponse(description="Validation error or invalid dates."),
+        },
+    )
+    def patch(self, request: Request, event_id: uuid.UUID) -> Response:
+        """Apply a partial update to the event. Only provided fields are changed."""
+        ser = UpdateEventSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        entity = UpdateEventUseCase(DjangoEventRepository()).execute(
+            event_id=event_id,
+            organiser_id=uuid.UUID(str(request.user.id)),
+            **ser.validated_data,
+        )
+        return success_response(EventResponseSerializer(entity).data, request=request)
+
+    @extend_schema(
+        tags=["Events"],
+        summary="Soft-delete an event",
+        responses={
+            204: OpenApiResponse(description="Event deleted."),
+            401: OpenApiResponse(description="Missing or invalid JWT."),
+            403: OpenApiResponse(description="Not the organiser."),
+            404: OpenApiResponse(description="Event not found."),
+        },
+    )
+    def delete(self, request: Request, event_id: uuid.UUID) -> Response:
+        """Soft-delete the event by setting deleted_at and status=cancelled."""
+        DeleteEventUseCase(DjangoEventRepository()).execute(
+            event_id=event_id,
+            organiser_id=uuid.UUID(str(request.user.id)),
+        )
+        return Response(status=204)
+
+
+class PublishEventView(APIView):
+    """Transition a draft event to published status."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["Events"],
+        summary="Publish a draft event",
+        request=None,
+        responses={
+            200: OpenApiResponse(description="Event published.", response=EventResponseSerializer),
+            401: OpenApiResponse(description="Missing or invalid JWT."),
+            403: OpenApiResponse(description="Not the organiser."),
+            404: OpenApiResponse(description="Event not found."),
+            422: OpenApiResponse(description="Invalid status transition or past start date."),
+        },
+    )
+    def post(self, request: Request, event_id: uuid.UUID) -> Response:
+        """Publish the event after validating ownership, status, and start date."""
+        entity = PublishEventUseCase(DjangoEventRepository()).execute(
+            event_id=event_id,
+            organiser_id=uuid.UUID(str(request.user.id)),
+        )
+        return success_response(EventResponseSerializer(entity).data, request=request)

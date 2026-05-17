@@ -22,6 +22,23 @@ class CreateEventSerializer(serializers.Serializer):
     price = serializers.DecimalField(max_digits=12, decimal_places=2, default="0.00")
 
 
+class UpdateEventSerializer(serializers.Serializer):
+    """Partial-update payload — every field is optional."""
+
+    title = serializers.CharField(max_length=255, required=False)
+    description = serializers.CharField(required=False)
+    location = serializers.CharField(max_length=500, required=False)
+    start_date = serializers.DateTimeField(required=False)
+    end_date = serializers.DateTimeField(required=False)
+    capacity = serializers.IntegerField(min_value=1, required=False)
+    visibility = serializers.ChoiceField(
+        choices=["public", "private", "unlisted"],
+        required=False,
+    )
+    is_free = serializers.BooleanField(required=False)
+    price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
+
+
 class EventResponseSerializer(serializers.Serializer):
     """Public shape of an event resource returned by the API."""
 
