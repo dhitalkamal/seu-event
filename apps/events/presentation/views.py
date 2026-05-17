@@ -18,39 +18,46 @@ from apps.common.health import check_database, check_rabbitmq, check_redis
 from apps.events.application.use_cases.complete_event import CompleteEventUseCase
 from apps.events.application.use_cases.create_category import CreateCategoryUseCase
 from apps.events.application.use_cases.create_event import CreateEventUseCase
+from apps.events.application.use_cases.create_tag import CreateTagUseCase
 from apps.events.application.use_cases.delete_event import DeleteEventUseCase
 from apps.events.application.use_cases.get_event import GetEventUseCase
 from apps.events.application.use_cases.list_categories import ListCategoriesUseCase
 from apps.events.application.use_cases.list_events import ListEventsUseCase
 from apps.events.application.use_cases.list_my_events import ListMyEventsUseCase
+from apps.events.application.use_cases.list_tags import ListTagsUseCase
 from apps.events.application.use_cases.publish_event import PublishEventUseCase
 from apps.events.application.use_cases.update_event import UpdateEventUseCase
 from apps.events.application.use_cases.update_registration_count import (
     UpdateRegistrationCountUseCase,
 )
 from apps.events.infrastructure.repositories import (
+    DjangoCategoryRepository,
     DjangoEventRepository,
+    DjangoTagRepository,
 )
 from apps.events.presentation.serializers import (
     CategoryResponseSerializer,
     CreateCategorySerializer,
     CreateEventSerializer,
+    CreateTagSerializer,
     EventFilterSerializer,
     EventResponseSerializer,
     RegistrationCountSerializer,
+    TagResponseSerializer,
     UpdateEventSerializer,
 )
 
-_CREATE_CAT_UC = CreateCategoryUseCase
-_LIST_CAT_UC = ListCategoriesUseCase
-
-# referenced below in CreateEventView.get() and EventMyView.get()
+# anchor variables keep use-case and serializer imports alive through ruff
 _PAGINATION_CLASS = StandardPagination
 _LIST_EVENTS_UC = ListEventsUseCase
 _LIST_MY_UC = ListMyEventsUseCase
 _FILTER_SER = EventFilterSerializer
 _COMPLETE_UC = CompleteEventUseCase
 _COUNT_UC = UpdateRegistrationCountUseCase
+_CREATE_CAT_UC = CreateCategoryUseCase
+_LIST_CAT_UC = ListCategoriesUseCase
+_CREATE_TAG_UC = CreateTagUseCase
+_LIST_TAG_UC = ListTagsUseCase
 
 _CHECKS = inline_serializer(
     name="DependencyChecks",
@@ -467,3 +474,51 @@ class CategoryListCreateView(APIView):
             parent_id=d.get("parent_id"),
         )
         return created_response(CategoryResponseSerializer(entity).data, request=request)
+
+
+class TagListCreateView(APIView):
+    """List all tags or create a new one."""
+
+    def get_permissions(self) -> list:
+        """Anyone can list; only authenticated users can create."""
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
+    @extend_schema(
+        tags=["Tags"],
+        summary="List all tags",
+        auth=[],
+        responses={
+            200: OpenApiResponse(
+                description="All tags.",
+                response=TagResponseSerializer(many=True),
+            ),
+        },
+    )
+    def get(self, request: Request) -> Response:
+        """Return all tags ordered by name."""
+        tags = _LIST_TAG_UC(DjangoTagRepository()).execute()
+        return success_response(TagResponseSerializer(tags, many=True).data, request=request)
+
+    @extend_schema(
+        tags=["Tags"],
+        summary="Create a tag",
+        request=CreateTagSerializer,
+        responses={
+            201: OpenApiResponse(description="Tag created.", response=TagResponseSerializer),
+            401: OpenApiResponse(description="Missing or invalid JWT."),
+            409: OpenApiResponse(description="Slug already exists."),
+            422: OpenApiResponse(description="Validation error."),
+        },
+    )
+    def post(self, request: Request) -> Response:
+        """Validate payload and persist the new tag."""
+        ser = CreateTagSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        d = ser.validated_data
+        entity = _CREATE_TAG_UC(DjangoTagRepository()).execute(
+            name=d["name"],
+            slug=d["slug"],
+        )
+        return created_response(TagResponseSerializer(entity).data, request=request)

@@ -6,9 +6,17 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
-from apps.events.domain.entities import CategoryEntity, EventEntity
-from apps.events.domain.exceptions import CategoryNotFoundError, EventNotFoundError
-from apps.events.domain.repositories import ICategoryRepository, IEventRepository
+from apps.events.domain.entities import CategoryEntity, EventEntity, TagEntity
+from apps.events.domain.exceptions import (
+    CategoryNotFoundError,
+    EventNotFoundError,
+    TagNotFoundError,
+)
+from apps.events.domain.repositories import (
+    ICategoryRepository,
+    IEventRepository,
+    ITagRepository,
+)
 
 
 def _now() -> datetime:
@@ -113,4 +121,31 @@ class FakeCategoryRepository(ICategoryRepository):
 
     def list_all(self) -> list[CategoryEntity]:
         """Return all stored categories."""
+        return list(self._store.values())
+
+
+class FakeTagRepository(ITagRepository):
+    """In-memory tag store backed by a dict keyed on tag.id."""
+
+    def __init__(self, tags: list[TagEntity] | None = None) -> None:
+        self._store: dict[uuid.UUID, TagEntity] = {t.id: t for t in (tags or [])}
+
+    def create(self, entity: TagEntity) -> TagEntity:
+        """Persist the entity and return it."""
+        self._store[entity.id] = entity
+        return entity
+
+    def get_by_slug(self, slug: str) -> TagEntity | None:
+        """Return the tag matching slug, or None if absent."""
+        return next((t for t in self._store.values() if t.slug == slug), None)
+
+    def get_by_id(self, tag_id: uuid.UUID) -> TagEntity:
+        """Return the tag or raise TagNotFoundError."""
+        entity = self._store.get(tag_id)
+        if entity is None:
+            raise TagNotFoundError("Tag not found.")
+        return entity
+
+    def list_all(self) -> list[TagEntity]:
+        """Return all stored tags."""
         return list(self._store.values())

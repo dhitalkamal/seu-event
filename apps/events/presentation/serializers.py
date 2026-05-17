@@ -72,6 +72,22 @@ class CategoryResponseSerializer(serializers.Serializer):
     depth = serializers.IntegerField()
 
 
+class CreateTagSerializer(serializers.Serializer):
+    """Payload for creating a new tag."""
+
+    name = serializers.CharField(max_length=100)
+    slug = serializers.SlugField(max_length=120)
+
+
+class TagResponseSerializer(serializers.Serializer):
+    """Public shape of a tag resource."""
+
+    id = serializers.UUIDField()
+    name = serializers.CharField()
+    slug = serializers.CharField()
+    usage_count = serializers.IntegerField()
+
+
 class RegistrationCountSerializer(serializers.Serializer):
     """Payload for incrementing or decrementing registered_count."""
 

@@ -7,7 +7,38 @@ from decimal import Decimal
 
 from django.db import models
 
-from apps.events.domain.entities import CategoryEntity, EventEntity
+from apps.events.domain.entities import CategoryEntity, EventEntity, TagEntity
+
+
+class Tag(models.Model):
+    """Free-form label that can be attached to events."""
+
+    class Meta:
+        db_table = '"events"."tag"'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=120, unique=True)
+    usage_count = models.PositiveIntegerField(default=0)
+
+    def to_entity(self) -> TagEntity:
+        """Map this ORM row to a TagEntity."""
+        return TagEntity(
+            id=self.id,
+            name=self.name,
+            slug=self.slug,
+            usage_count=self.usage_count,
+        )
+
+    @classmethod
+    def from_entity(cls, entity: TagEntity) -> "Tag":
+        """Build an unsaved ORM instance from a TagEntity."""
+        return cls(
+            id=entity.id,
+            name=entity.name,
+            slug=entity.slug,
+            usage_count=entity.usage_count,
+        )
 
 
 class Category(models.Model):

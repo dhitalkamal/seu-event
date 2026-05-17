@@ -13,6 +13,7 @@ from .views import (
     HealthCheckView,
     PublishEventView,
     RegistrationCountView,
+    TagListCreateView,
 )
 
 urlpatterns: list[URLPattern] = [
@@ -28,4 +29,5 @@ urlpatterns: list[URLPattern] = [
         name="event-registration-count",
     ),
     path("categories/", CategoryListCreateView.as_view(), name="category-list-create"),
+    path("tags/", TagListCreateView.as_view(), name="tag-list-create"),
 ]

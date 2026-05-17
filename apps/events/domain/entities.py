@@ -9,6 +9,16 @@ from decimal import Decimal
 
 
 @dataclass(slots=True)
+class TagEntity:
+    """A free-form label that can be attached to events."""
+
+    id: uuid.UUID
+    name: str
+    slug: str
+    usage_count: int = 0
+
+
+@dataclass(slots=True)
 class CategoryEntity:
     """A hierarchical event category. Maximum 3 levels deep (depth 0, 1, 2)."""
 
