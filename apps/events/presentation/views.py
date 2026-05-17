@@ -204,6 +204,11 @@ class CreateEventView(APIView):
             organiser_id=f.get("organiser_id"),
             is_free=f.get("is_free"),
             search=f.get("search"),
+            category_id=f.get("category_id"),
+            tag_id=f.get("tag_id"),
+            date_from=f.get("date_from"),
+            date_to=f.get("date_to"),
+            location=f.get("location"),
         )
         paginator = _PAGINATION_CLASS()
         page = paginator.paginate_queryset(events, request)
@@ -214,7 +219,7 @@ class CreateEventView(APIView):
         summary="Create a new event",
         description=(
             "Creates an event in DRAFT status. "
-            "The organiser is inferred from the JWT — no organiser_id in the request body. "
+            "The organiser is inferred from the JWT - no organiser_id in the request body. "
             "Returns 422 if the payload fails validation or dates are invalid."
         ),
         request=CreateEventSerializer,
@@ -358,7 +363,7 @@ class EventMyView(APIView):
     @extend_schema(
         tags=["Events"],
         summary="List my events",
-        description="Returns all non-deleted events owned by the authenticated organiser at any status.",
+        description="Returns all non-deleted events owned by the authenticated organiser.",
         responses={
             200: OpenApiResponse(
                 description="Paginated list of own events.",

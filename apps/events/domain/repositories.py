@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 from apps.events.domain.entities import CategoryEntity, EventEntity, TagEntity
 
@@ -56,6 +57,11 @@ class IEventRepository(ABC):
         organiser_id: uuid.UUID | None = None,
         is_free: bool | None = None,
         search: str | None = None,
+        category_id: uuid.UUID | None = None,
+        tag_id: uuid.UUID | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        location: str | None = None,
     ) -> list[EventEntity]: ...
 
     @abstractmethod
