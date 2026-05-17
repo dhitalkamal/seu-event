@@ -56,6 +56,7 @@ class IEventRepository(ABC):
         organiser_id: uuid.UUID | None = None,
         is_free: bool | None = None,
         search: str | None = None,
+        category_id: uuid.UUID | None = None,
     ) -> list[EventEntity]: ...
 
     @abstractmethod

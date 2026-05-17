@@ -257,6 +257,7 @@ class CreateEventView(APIView):
         f = filter_ser.validated_data
         events = ListEventsUseCase(DjangoEventRepository()).execute(
             organiser_id=f.get("organiser_id"),
+            category_id=f.get("category_id"),
             is_free=f.get("is_free"),
             search=f.get("search"),
         )

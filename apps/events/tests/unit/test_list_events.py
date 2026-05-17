@@ -55,3 +55,15 @@ def test_list_events_returns_empty_when_no_matches():
     repo = FakeEventRepository()
     results = ListEventsUseCase(repo).execute()
     assert results == []
+
+
+def test_list_events_filter_by_category_id():
+    """Filtering by category_id returns only events in that category."""
+    cat_id = uuid.uuid4()
+    in_cat = make_event(status="published", visibility="public", category_id=cat_id)
+    no_cat = make_event(status="published", visibility="public", category_id=None)
+    other_cat = make_event(status="published", visibility="public", category_id=uuid.uuid4())
+    repo = FakeEventRepository([in_cat, no_cat, other_cat])
+    results = ListEventsUseCase(repo).execute(category_id=cat_id)
+    assert len(results) == 1
+    assert results[0].id == in_cat.id

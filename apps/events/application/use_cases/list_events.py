@@ -20,10 +20,12 @@ class ListEventsUseCase:
         organiser_id: uuid.UUID | None = None,
         is_free: bool | None = None,
         search: str | None = None,
+        category_id: uuid.UUID | None = None,
     ) -> list[EventEntity]:
         """Delegate filtering to the repository and return the matching events."""
         return self._events.list_public(
             organiser_id=organiser_id,
             is_free=is_free,
             search=search,
+            category_id=category_id,
         )

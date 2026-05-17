@@ -112,6 +112,7 @@ class DjangoEventRepository(IEventRepository):
         organiser_id: uuid.UUID | None = None,
         is_free: bool | None = None,
         search: str | None = None,
+        category_id: uuid.UUID | None = None,
     ) -> list[EventEntity]:
         """Return published public non-deleted events, applying optional filters."""
         qs = Event.objects.filter(
@@ -125,6 +126,8 @@ class DjangoEventRepository(IEventRepository):
             qs = qs.filter(is_free=is_free)
         if search is not None:
             qs = qs.filter(title__icontains=search)
+        if category_id is not None:
+            qs = qs.filter(category_id=category_id)
         return [obj.to_entity() for obj in qs.order_by("-created_at")]
 
     def list_by_organiser(self, organiser_id: uuid.UUID) -> list[EventEntity]:

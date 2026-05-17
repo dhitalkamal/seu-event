@@ -51,6 +51,7 @@ class EventFilterSerializer(serializers.Serializer):
     """Query parameter validator for the public event list endpoint."""
 
     organiser_id = serializers.UUIDField(required=False)
+    category_id = serializers.UUIDField(required=False)
     # NullBooleanField used intentionally: BooleanField treats a missing
     # QueryDict key as False (HTML checkbox semantics), which would silently
     # filter out all free events when no is_free param is provided.
