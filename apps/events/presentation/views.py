@@ -23,11 +23,15 @@ from apps.events.application.use_cases.list_events import ListEventsUseCase
 from apps.events.application.use_cases.list_my_events import ListMyEventsUseCase
 from apps.events.application.use_cases.publish_event import PublishEventUseCase
 from apps.events.application.use_cases.update_event import UpdateEventUseCase
+from apps.events.application.use_cases.update_registration_count import (
+    UpdateRegistrationCountUseCase,
+)
 from apps.events.infrastructure.repositories import DjangoEventRepository
 from apps.events.presentation.serializers import (
     CreateEventSerializer,
     EventFilterSerializer,
     EventResponseSerializer,
+    RegistrationCountSerializer,
     UpdateEventSerializer,
 )
 
@@ -37,6 +41,7 @@ _LIST_EVENTS_UC = ListEventsUseCase
 _LIST_MY_UC = ListMyEventsUseCase
 _FILTER_SER = EventFilterSerializer
 _COMPLETE_UC = CompleteEventUseCase
+_COUNT_UC = UpdateRegistrationCountUseCase
 
 _CHECKS = inline_serializer(
     name="DependencyChecks",
@@ -367,3 +372,35 @@ class CompleteEventView(APIView):
             organiser_id=uuid.UUID(str(request.user.id)),
         )
         return success_response(EventResponseSerializer(entity).data, request=request)
+
+
+class RegistrationCountView(APIView):
+    """Internal endpoint for participation-service to sync registered_count."""
+
+    authentication_classes: list = []
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        tags=["Internal"],
+        summary="Update event registered_count",
+        description=(
+            "Called by participation-service when a registration is created (+1) "
+            "or cancelled (-1). Not for external clients."
+        ),
+        auth=[],
+        request=RegistrationCountSerializer,
+        responses={
+            200: OpenApiResponse(description="Count updated."),
+            404: OpenApiResponse(description="Event not found."),
+            422: OpenApiResponse(description="Validation error."),
+        },
+    )
+    def post(self, request: Request, event_id: uuid.UUID) -> Response:
+        """Apply delta to event registered_count."""
+        ser = RegistrationCountSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        _COUNT_UC(DjangoEventRepository()).execute(
+            event_id=event_id,
+            delta=ser.validated_data["delta"],
+        )
+        return success_response({"updated": True}, request=request)

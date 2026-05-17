@@ -11,6 +11,7 @@ from .views import (
     EventMyView,
     HealthCheckView,
     PublishEventView,
+    RegistrationCountView,
 )
 
 urlpatterns: list[URLPattern] = [
@@ -20,4 +21,9 @@ urlpatterns: list[URLPattern] = [
     path("events/<uuid:event_id>/", EventDetailView.as_view(), name="event-detail"),
     path("events/<uuid:event_id>/publish/", PublishEventView.as_view(), name="event-publish"),
     path("events/<uuid:event_id>/complete/", CompleteEventView.as_view(), name="event-complete"),
+    path(
+        "events/<uuid:event_id>/registration-count/",
+        RegistrationCountView.as_view(),
+        name="event-registration-count",
+    ),
 ]

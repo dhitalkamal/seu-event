@@ -50,6 +50,12 @@ class EventFilterSerializer(serializers.Serializer):
     search = serializers.CharField(required=False, max_length=255)
 
 
+class RegistrationCountSerializer(serializers.Serializer):
+    """Payload for incrementing or decrementing registered_count."""
+
+    delta = serializers.IntegerField()
+
+
 class EventResponseSerializer(serializers.Serializer):
     """Public shape of an event resource returned by the API."""
 
