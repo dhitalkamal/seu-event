@@ -14,6 +14,7 @@ dependencies = [
     "redis",
     "pika",
     "drf-spectacular",
+    "boto3>=1.43.9",
 ]
 
 [dependency-groups]

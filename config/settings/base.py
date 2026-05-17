@@ -109,6 +109,12 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = config("CORS_ALLOWED_ORIGINS", default="", cast=Csv())
 
 REDIS_URL = config("REDIS_URL", default="redis://localhost:6379/0")
+
+MINIO_ENDPOINT = config("MINIO_ENDPOINT", default="minio:9000")
+MINIO_ACCESS_KEY = config("MINIO_ACCESS_KEY", default="sansaar")
+MINIO_SECRET_KEY = config("MINIO_SECRET_KEY", default="sansaar_secret_12345")
+MINIO_BUCKET = config("MINIO_BUCKET", default="sansaar-events")
+MINIO_PUBLIC_URL = config("MINIO_PUBLIC_URL", default="http://localhost:9000")
 RABBITMQ_URL = config("RABBITMQ_URL", default="amqp://guest:guest@localhost:5672/")
 
 CACHES = {

@@ -7,6 +7,7 @@ from django.urls import URLPattern, path
 from .views import (
     CategoryListCreateView,
     CompleteEventView,
+    CoverImageUploadView,
     CreateEventView,
     EventDetailView,
     EventMyView,
@@ -30,4 +31,5 @@ urlpatterns: list[URLPattern] = [
     ),
     path("categories/", CategoryListCreateView.as_view(), name="category-list-create"),
     path("tags/", TagListCreateView.as_view(), name="tag-list-create"),
+    path("uploads/cover/", CoverImageUploadView.as_view(), name="cover-image-upload"),
 ]

@@ -603,6 +603,62 @@ class CategoryListCreateView(APIView):
         return created_response(CategoryResponseSerializer(entity).data, request=request)
 
 
+class CoverImageUploadView(APIView):
+    """Upload a cover image to MinIO and return the public URL."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["Uploads"],
+        summary="Upload cover image",
+        description="Accepts a multipart image file, stores it in MinIO, returns the URL for use in cover_image.",
+        request=inline_serializer(
+            name="CoverImageUploadRequest",
+            fields={"file": serializers.ImageField()},
+        ),
+        responses={
+            200: OpenApiResponse(
+                description="Upload successful.",
+                response=inline_serializer(
+                    name="CoverImageUploadResponse",
+                    fields={"url": serializers.URLField()},
+                ),
+            ),
+            400: OpenApiResponse(description="No file provided or invalid file type."),
+            401: OpenApiResponse(description="Missing or invalid JWT."),
+        },
+    )
+    def post(self, request: Request) -> Response:
+        """Upload the image file and return its public MinIO URL."""
+        from apps.events.infrastructure.storage import upload_image
+
+        file = request.FILES.get("file")
+        if not file:
+            return error_response(
+                code="ERR_EVENT_NO_FILE",
+                message="No file provided.",
+                http_status=400,
+                request=request,
+            )
+
+        content_type = file.content_type or "application/octet-stream"
+        if not content_type.startswith("image/"):
+            return error_response(
+                code="ERR_EVENT_INVALID_FILE_TYPE",
+                message="Only image files are accepted.",
+                http_status=400,
+                request=request,
+            )
+
+        extension = content_type.split("/")[-1].replace("jpeg", "jpg")
+        url = upload_image(
+            file_data=file.read(),
+            content_type=content_type,
+            extension=extension,
+        )
+        return success_response({"url": url}, request=request)
+
+
 class TagListCreateView(APIView):
     """List all tags or create a new one."""
 
