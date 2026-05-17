@@ -28,6 +28,8 @@ class EventEntity:
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None = None
+    cover_image: str | None = None
+    is_online: bool = False
 
     @property
     def is_at_capacity(self) -> bool:

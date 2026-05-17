@@ -224,7 +224,9 @@ class CreateEventView(APIView):
             capacity=d["capacity"],
             visibility=d["visibility"],
             is_free=d["is_free"],
-            price=d["price"],
+            price=d.get("price"),
+            cover_image=d.get("cover_image"),
+            is_online=d.get("is_online", False),
         )
         return created_response(EventResponseSerializer(entity).data, request=request)
 

@@ -20,6 +20,8 @@ class CreateEventSerializer(serializers.Serializer):
     )
     is_free = serializers.BooleanField(default=True)
     price = serializers.DecimalField(max_digits=12, decimal_places=2, default="0.00")
+    cover_image = serializers.URLField(max_length=2048, required=False, allow_null=True)
+    is_online = serializers.BooleanField(default=False)
 
 
 class UpdateEventSerializer(serializers.Serializer):
@@ -37,6 +39,8 @@ class UpdateEventSerializer(serializers.Serializer):
     )
     is_free = serializers.BooleanField(required=False)
     price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
+    cover_image = serializers.URLField(max_length=2048, required=False, allow_null=True)
+    is_online = serializers.BooleanField(required=False)
 
 
 class EventFilterSerializer(serializers.Serializer):
@@ -72,5 +76,7 @@ class EventResponseSerializer(serializers.Serializer):
     visibility = serializers.CharField()
     is_free = serializers.BooleanField()
     price = serializers.DecimalField(max_digits=12, decimal_places=2)
+    cover_image = serializers.URLField(allow_null=True)
+    is_online = serializers.BooleanField()
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()

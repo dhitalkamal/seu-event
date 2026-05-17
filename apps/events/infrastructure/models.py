@@ -42,6 +42,8 @@ class Event(models.Model):
     )
     is_free = models.BooleanField(default=True)
     price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    cover_image = models.URLField(max_length=2048, null=True, blank=True)
+    is_online = models.BooleanField(default=False)
     deleted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -62,6 +64,8 @@ class Event(models.Model):
             visibility=self.visibility,
             is_free=self.is_free,
             price=self.price,
+            cover_image=self.cover_image,
+            is_online=self.is_online,
             created_at=self.created_at,
             updated_at=self.updated_at,
             deleted_at=self.deleted_at,
@@ -84,5 +88,7 @@ class Event(models.Model):
             visibility=entity.visibility,
             is_free=entity.is_free,
             price=entity.price,
+            cover_image=entity.cover_image,
+            is_online=entity.is_online,
             deleted_at=entity.deleted_at,
         )

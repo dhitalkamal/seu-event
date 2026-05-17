@@ -29,7 +29,9 @@ class CreateEventUseCase:
         capacity: int,
         visibility: str,
         is_free: bool,
-        price: Decimal,
+        price: Decimal | None,
+        cover_image: str | None = None,
+        is_online: bool = False,
     ) -> EventEntity:
         """
         Validate dates, apply pricing rule, and persist the event.
@@ -51,8 +53,7 @@ class CreateEventUseCase:
             raise EventDateError("end_date must be strictly after start_date.")
 
         # * free events always have zero price regardless of submitted value
-        if is_free:
-            price = Decimal("0.00")
+        effective_price = Decimal("0.00") if is_free else (price or Decimal("0.00"))
 
         now = datetime.now(timezone.utc)
         entity = EventEntity(
@@ -68,8 +69,10 @@ class CreateEventUseCase:
             status="draft",
             visibility=visibility,
             is_free=is_free,
-            price=price,
+            price=effective_price,
             created_at=now,
             updated_at=now,
+            cover_image=cover_image,
+            is_online=is_online,
         )
         return self._events.create(entity)

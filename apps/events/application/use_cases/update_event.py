@@ -31,6 +31,8 @@ class UpdateEventUseCase:
         visibility: str | None = None,
         is_free: bool | None = None,
         price: Decimal | None = None,
+        cover_image: str | None = None,
+        is_online: bool | None = None,
     ) -> EventEntity:
         """
         Apply only the provided (non-None) fields and persist.
@@ -73,6 +75,10 @@ class UpdateEventUseCase:
                 event.price = Decimal("0.00")
         if price is not None and not event.is_free:
             event.price = price
+        if cover_image is not None:
+            event.cover_image = cover_image
+        if is_online is not None:
+            event.is_online = is_online
 
         event.updated_at = datetime.now(timezone.utc)
         return self._events.update(event)
