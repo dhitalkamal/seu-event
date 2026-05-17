@@ -3,9 +3,30 @@
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
+
+
+@dataclass(slots=True)
+class TagEntity:
+    """A free-form label that can be attached to events."""
+
+    id: uuid.UUID
+    name: str
+    slug: str
+    usage_count: int = 0
+
+
+@dataclass(slots=True)
+class CategoryEntity:
+    """A hierarchical event category. Maximum 3 levels deep (depth 0, 1, 2)."""
+
+    id: uuid.UUID
+    name: str
+    slug: str
+    depth: int
+    parent_id: uuid.UUID | None = None
 
 
 @dataclass(slots=True)
@@ -28,6 +49,10 @@ class EventEntity:
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None = None
+    cover_image: str | None = None
+    is_online: bool = False
+    category_id: uuid.UUID | None = None
+    tag_ids: list[uuid.UUID] = field(default_factory=list)
 
     @property
     def is_at_capacity(self) -> bool:

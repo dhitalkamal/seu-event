@@ -20,6 +20,10 @@ class CreateEventSerializer(serializers.Serializer):
     )
     is_free = serializers.BooleanField(default=True)
     price = serializers.DecimalField(max_digits=12, decimal_places=2, default="0.00")
+    cover_image = serializers.URLField(max_length=2048, required=False, allow_null=True)
+    is_online = serializers.BooleanField(default=False)
+    category_id = serializers.UUIDField(required=False, allow_null=True)
+    tag_ids = serializers.ListField(child=serializers.UUIDField(), required=False, default=list)
 
 
 class UpdateEventSerializer(serializers.Serializer):
@@ -37,6 +41,10 @@ class UpdateEventSerializer(serializers.Serializer):
     )
     is_free = serializers.BooleanField(required=False)
     price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
+    cover_image = serializers.URLField(max_length=2048, required=False, allow_null=True)
+    is_online = serializers.BooleanField(required=False)
+    category_id = serializers.UUIDField(required=False, allow_null=True)
+    tag_ids = serializers.ListField(child=serializers.UUIDField(), required=False)
 
 
 class EventFilterSerializer(serializers.Serializer):
@@ -48,6 +56,46 @@ class EventFilterSerializer(serializers.Serializer):
     # filter out all free events when no is_free param is provided.
     is_free = serializers.BooleanField(required=False, allow_null=True)
     search = serializers.CharField(required=False, max_length=255)
+
+
+class CreateCategorySerializer(serializers.Serializer):
+    """Payload for creating a new category."""
+
+    name = serializers.CharField(max_length=100)
+    slug = serializers.SlugField(max_length=120)
+    parent_id = serializers.UUIDField(required=False, allow_null=True)
+
+
+class CategoryResponseSerializer(serializers.Serializer):
+    """Public shape of a category resource."""
+
+    id = serializers.UUIDField()
+    name = serializers.CharField()
+    slug = serializers.CharField()
+    parent_id = serializers.UUIDField(allow_null=True)
+    depth = serializers.IntegerField()
+
+
+class CreateTagSerializer(serializers.Serializer):
+    """Payload for creating a new tag."""
+
+    name = serializers.CharField(max_length=100)
+    slug = serializers.SlugField(max_length=120)
+
+
+class TagResponseSerializer(serializers.Serializer):
+    """Public shape of a tag resource."""
+
+    id = serializers.UUIDField()
+    name = serializers.CharField()
+    slug = serializers.CharField()
+    usage_count = serializers.IntegerField()
+
+
+class RegistrationCountSerializer(serializers.Serializer):
+    """Payload for incrementing or decrementing registered_count."""
+
+    delta = serializers.IntegerField()
 
 
 class EventResponseSerializer(serializers.Serializer):
@@ -66,5 +114,9 @@ class EventResponseSerializer(serializers.Serializer):
     visibility = serializers.CharField()
     is_free = serializers.BooleanField()
     price = serializers.DecimalField(max_digits=12, decimal_places=2)
+    cover_image = serializers.URLField(allow_null=True)
+    is_online = serializers.BooleanField()
+    category_id = serializers.UUIDField(allow_null=True)
+    tag_ids = serializers.ListField(child=serializers.UUIDField())
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()

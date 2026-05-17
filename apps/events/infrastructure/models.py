@@ -7,7 +7,78 @@ from decimal import Decimal
 
 from django.db import models
 
-from apps.events.domain.entities import EventEntity
+from apps.events.domain.entities import CategoryEntity, EventEntity, TagEntity
+
+
+class Tag(models.Model):
+    """Free-form label that can be attached to events."""
+
+    class Meta:
+        db_table = '"events"."tag"'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=120, unique=True)
+    usage_count = models.PositiveIntegerField(default=0)
+
+    def to_entity(self) -> TagEntity:
+        """Map this ORM row to a TagEntity."""
+        return TagEntity(
+            id=self.id,
+            name=self.name,
+            slug=self.slug,
+            usage_count=self.usage_count,
+        )
+
+    @classmethod
+    def from_entity(cls, entity: TagEntity) -> "Tag":
+        """Build an unsaved ORM instance from a TagEntity."""
+        return cls(
+            id=entity.id,
+            name=entity.name,
+            slug=entity.slug,
+            usage_count=entity.usage_count,
+        )
+
+
+class Category(models.Model):
+    """Hierarchical event category. Self-referential FK; max 3 levels deep."""
+
+    class Meta:
+        db_table = '"events"."category"'
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=120, unique=True)
+    parent = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="children",
+    )
+    depth = models.PositiveSmallIntegerField(default=0)
+
+    def to_entity(self) -> CategoryEntity:
+        """Map this ORM row to a CategoryEntity."""
+        return CategoryEntity(
+            id=self.id,
+            name=self.name,
+            slug=self.slug,
+            parent_id=self.parent_id,
+            depth=self.depth,
+        )
+
+    @classmethod
+    def from_entity(cls, entity: CategoryEntity) -> "Category":
+        """Build an unsaved ORM instance from a CategoryEntity."""
+        return cls(
+            id=entity.id,
+            name=entity.name,
+            slug=entity.slug,
+            parent_id=entity.parent_id,
+            depth=entity.depth,
+        )
 
 
 class Event(models.Model):
@@ -42,6 +113,16 @@ class Event(models.Model):
     )
     is_free = models.BooleanField(default=True)
     price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    cover_image = models.URLField(max_length=2048, null=True, blank=True)
+    is_online = models.BooleanField(default=False)
+    category = models.ForeignKey(
+        Category,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="events",
+    )
+    tags = models.ManyToManyField(Tag, blank=True, related_name="events")
     deleted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -62,6 +143,10 @@ class Event(models.Model):
             visibility=self.visibility,
             is_free=self.is_free,
             price=self.price,
+            cover_image=self.cover_image,
+            is_online=self.is_online,
+            category_id=self.category_id,
+            tag_ids=[t.id for t in self.tags.all()],
             created_at=self.created_at,
             updated_at=self.updated_at,
             deleted_at=self.deleted_at,
@@ -84,5 +169,8 @@ class Event(models.Model):
             visibility=entity.visibility,
             is_free=entity.is_free,
             price=entity.price,
+            cover_image=entity.cover_image,
+            is_online=entity.is_online,
+            category_id=entity.category_id,
             deleted_at=entity.deleted_at,
         )

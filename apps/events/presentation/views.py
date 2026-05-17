@@ -15,18 +15,35 @@ from rest_framework.views import APIView
 from apps.common.api.pagination import StandardPagination
 from apps.common.api.responses import created_response, error_response, success_response
 from apps.common.health import check_database, check_rabbitmq, check_redis
+from apps.events.application.use_cases.complete_event import CompleteEventUseCase
+from apps.events.application.use_cases.create_category import CreateCategoryUseCase
 from apps.events.application.use_cases.create_event import CreateEventUseCase
+from apps.events.application.use_cases.create_tag import CreateTagUseCase
 from apps.events.application.use_cases.delete_event import DeleteEventUseCase
 from apps.events.application.use_cases.get_event import GetEventUseCase
+from apps.events.application.use_cases.list_categories import ListCategoriesUseCase
 from apps.events.application.use_cases.list_events import ListEventsUseCase
 from apps.events.application.use_cases.list_my_events import ListMyEventsUseCase
+from apps.events.application.use_cases.list_tags import ListTagsUseCase
 from apps.events.application.use_cases.publish_event import PublishEventUseCase
 from apps.events.application.use_cases.update_event import UpdateEventUseCase
-from apps.events.infrastructure.repositories import DjangoEventRepository
+from apps.events.application.use_cases.update_registration_count import (
+    UpdateRegistrationCountUseCase,
+)
+from apps.events.infrastructure.repositories import (
+    DjangoCategoryRepository,
+    DjangoEventRepository,
+    DjangoTagRepository,
+)
 from apps.events.presentation.serializers import (
+    CategoryResponseSerializer,
+    CreateCategorySerializer,
     CreateEventSerializer,
+    CreateTagSerializer,
     EventFilterSerializer,
     EventResponseSerializer,
+    RegistrationCountSerializer,
+    TagResponseSerializer,
     UpdateEventSerializer,
 )
 
@@ -69,6 +86,18 @@ _MSG_ENVELOPE = inline_serializer(
         "meta": _META,
     },
 )
+
+# anchor variables keep use-case and serializer imports alive through ruff
+_PAGINATION_CLASS = StandardPagination
+_LIST_EVENTS_UC = ListEventsUseCase
+_LIST_MY_UC = ListMyEventsUseCase
+_FILTER_SER = EventFilterSerializer
+_COMPLETE_UC = CompleteEventUseCase
+_COUNT_UC = UpdateRegistrationCountUseCase
+_CREATE_CAT_UC = CreateCategoryUseCase
+_LIST_CAT_UC = ListCategoriesUseCase
+_CREATE_TAG_UC = CreateTagUseCase
+_LIST_TAG_UC = ListTagsUseCase
 
 _CHECKS = inline_serializer(
     name="EventDependencyChecks",
@@ -266,7 +295,11 @@ class CreateEventView(APIView):
         ser.is_valid(raise_exception=True)
         d = ser.validated_data
 
-        entity = CreateEventUseCase(DjangoEventRepository()).execute(
+        entity = CreateEventUseCase(
+            DjangoEventRepository(),
+            category_repo=DjangoCategoryRepository(),
+            tag_repo=DjangoTagRepository(),
+        ).execute(
             organiser_id=uuid.UUID(str(request.user.id)),
             title=d["title"],
             description=d["description"],
@@ -276,7 +309,11 @@ class CreateEventView(APIView):
             capacity=d["capacity"],
             visibility=d["visibility"],
             is_free=d["is_free"],
-            price=d["price"],
+            price=d.get("price"),
+            cover_image=d.get("cover_image"),
+            is_online=d.get("is_online", False),
+            category_id=d.get("category_id"),
+            tag_ids=d.get("tag_ids", []),
         )
         return created_response(EventResponseSerializer(entity).data, request=request)
 
@@ -348,7 +385,11 @@ class EventDetailView(APIView):
         """Apply a partial update to the event."""
         ser = UpdateEventSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
-        entity = UpdateEventUseCase(DjangoEventRepository()).execute(
+        entity = UpdateEventUseCase(
+            DjangoEventRepository(),
+            category_repo=DjangoCategoryRepository(),
+            tag_repo=DjangoTagRepository(),
+        ).execute(
             event_id=event_id,
             organiser_id=uuid.UUID(str(request.user.id)),
             **ser.validated_data,
@@ -449,3 +490,161 @@ class EventMyView(APIView):
         paginator = StandardPagination()
         page = paginator.paginate_queryset(events, request)
         return paginator.get_paginated_response(EventResponseSerializer(page, many=True).data)
+
+
+class CompleteEventView(APIView):
+    """Transition a published event to completed status."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["Events"],
+        summary="Complete a published event",
+        request=None,
+        responses={
+            200: OpenApiResponse(description="Event completed.", response=EventResponseSerializer),
+            401: OpenApiResponse(description="Missing or invalid JWT."),
+            403: OpenApiResponse(description="Not the organiser."),
+            404: OpenApiResponse(description="Event not found."),
+            422: OpenApiResponse(description="Event is not in published status."),
+        },
+    )
+    def post(self, request: Request, event_id: uuid.UUID) -> Response:
+        """Mark the published event as completed."""
+        entity = _COMPLETE_UC(DjangoEventRepository()).execute(
+            event_id=event_id,
+            organiser_id=uuid.UUID(str(request.user.id)),
+        )
+        return success_response(EventResponseSerializer(entity).data, request=request)
+
+
+class RegistrationCountView(APIView):
+    """Internal endpoint for participation-service to sync registered_count."""
+
+    authentication_classes: list = []
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        tags=["Internal"],
+        summary="Update event registered_count",
+        description=(
+            "Called by participation-service when a registration is created (+1) "
+            "or cancelled (-1). Not for external clients."
+        ),
+        auth=[],
+        request=RegistrationCountSerializer,
+        responses={
+            200: OpenApiResponse(description="Count updated."),
+            404: OpenApiResponse(description="Event not found."),
+            422: OpenApiResponse(description="Validation error."),
+        },
+    )
+    def post(self, request: Request, event_id: uuid.UUID) -> Response:
+        """Apply delta to event registered_count."""
+        ser = RegistrationCountSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        _COUNT_UC(DjangoEventRepository()).execute(
+            event_id=event_id,
+            delta=ser.validated_data["delta"],
+        )
+        return success_response({"updated": True}, request=request)
+
+
+class CategoryListCreateView(APIView):
+    """List all categories or create a new one."""
+
+    def get_permissions(self) -> list:
+        """Anyone can list; only authenticated users can create."""
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
+    @extend_schema(
+        tags=["Categories"],
+        summary="List all categories",
+        auth=[],
+        responses={
+            200: OpenApiResponse(
+                description="All categories.",
+                response=CategoryResponseSerializer(many=True),
+            ),
+        },
+    )
+    def get(self, request: Request) -> Response:
+        """Return all categories ordered by depth then name."""
+        categories = _LIST_CAT_UC(DjangoCategoryRepository()).execute()
+        return success_response(
+            CategoryResponseSerializer(categories, many=True).data, request=request
+        )
+
+    @extend_schema(
+        tags=["Categories"],
+        summary="Create a category",
+        request=CreateCategorySerializer,
+        responses={
+            201: OpenApiResponse(
+                description="Category created.", response=CategoryResponseSerializer
+            ),
+            401: OpenApiResponse(description="Missing or invalid JWT."),
+            422: OpenApiResponse(description="Validation error or depth limit exceeded."),
+        },
+    )
+    def post(self, request: Request) -> Response:
+        """Validate payload and persist the new category."""
+        ser = CreateCategorySerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        d = ser.validated_data
+        entity = _CREATE_CAT_UC(DjangoCategoryRepository()).execute(
+            name=d["name"],
+            slug=d["slug"],
+            parent_id=d.get("parent_id"),
+        )
+        return created_response(CategoryResponseSerializer(entity).data, request=request)
+
+
+class TagListCreateView(APIView):
+    """List all tags or create a new one."""
+
+    def get_permissions(self) -> list:
+        """Anyone can list; only authenticated users can create."""
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
+    @extend_schema(
+        tags=["Tags"],
+        summary="List all tags",
+        auth=[],
+        responses={
+            200: OpenApiResponse(
+                description="All tags.",
+                response=TagResponseSerializer(many=True),
+            ),
+        },
+    )
+    def get(self, request: Request) -> Response:
+        """Return all tags ordered by name."""
+        tags = _LIST_TAG_UC(DjangoTagRepository()).execute()
+        return success_response(TagResponseSerializer(tags, many=True).data, request=request)
+
+    @extend_schema(
+        tags=["Tags"],
+        summary="Create a tag",
+        request=CreateTagSerializer,
+        responses={
+            201: OpenApiResponse(description="Tag created.", response=TagResponseSerializer),
+            401: OpenApiResponse(description="Missing or invalid JWT."),
+            409: OpenApiResponse(description="Slug already exists."),
+            422: OpenApiResponse(description="Validation error."),
+        },
+    )
+    def post(self, request: Request) -> Response:
+        """Validate payload and persist the new tag."""
+        ser = CreateTagSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        d = ser.validated_data
+        entity = _CREATE_TAG_UC(DjangoTagRepository()).execute(
+            name=d["name"],
+            slug=d["slug"],
+        )
+        return created_response(TagResponseSerializer(entity).data, request=request)
