@@ -12,19 +12,29 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.common.api.pagination import StandardPagination
 from apps.common.api.responses import created_response, error_response, success_response
 from apps.common.health import check_database, check_rabbitmq, check_redis
 from apps.events.application.use_cases.create_event import CreateEventUseCase
 from apps.events.application.use_cases.delete_event import DeleteEventUseCase
 from apps.events.application.use_cases.get_event import GetEventUseCase
+from apps.events.application.use_cases.list_events import ListEventsUseCase
+from apps.events.application.use_cases.list_my_events import ListMyEventsUseCase
 from apps.events.application.use_cases.publish_event import PublishEventUseCase
 from apps.events.application.use_cases.update_event import UpdateEventUseCase
 from apps.events.infrastructure.repositories import DjangoEventRepository
 from apps.events.presentation.serializers import (
     CreateEventSerializer,
+    EventFilterSerializer,
     EventResponseSerializer,
     UpdateEventSerializer,
 )
+
+# referenced below in CreateEventView.get() and EventMyView.get()
+_PAGINATION_CLASS = StandardPagination
+_LIST_EVENTS_UC = ListEventsUseCase
+_LIST_MY_UC = ListMyEventsUseCase
+_FILTER_SER = EventFilterSerializer
 
 _CHECKS = inline_serializer(
     name="DependencyChecks",
@@ -141,9 +151,40 @@ class HealthCheckView(APIView):
 
 
 class CreateEventView(APIView):
-    """Create a new event in DRAFT status owned by the authenticated organiser."""
+    """List published public events or create a new event."""
 
     permission_classes = [IsAuthenticated]
+
+    def get_permissions(self) -> list:
+        """Allow anyone to list events; require auth to create."""
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
+    @extend_schema(
+        tags=["Events"],
+        summary="List published public events",
+        parameters=[_FILTER_SER],
+        responses={
+            200: OpenApiResponse(
+                description="Paginated list of published public events.",
+                response=EventResponseSerializer(many=True),
+            ),
+        },
+    )
+    def get(self, request: Request) -> Response:
+        """Return paginated published public events with optional filters."""
+        filter_ser = _FILTER_SER(data=request.query_params)
+        filter_ser.is_valid(raise_exception=True)
+        f = filter_ser.validated_data
+        events = _LIST_EVENTS_UC(DjangoEventRepository()).execute(
+            organiser_id=f.get("organiser_id"),
+            is_free=f.get("is_free"),
+            search=f.get("search"),
+        )
+        paginator = _PAGINATION_CLASS()
+        page = paginator.paginate_queryset(events, request)
+        return paginator.get_paginated_response(EventResponseSerializer(page, many=True).data)
 
     @extend_schema(
         tags=["Events"],
@@ -266,3 +307,29 @@ class PublishEventView(APIView):
             organiser_id=uuid.UUID(str(request.user.id)),
         )
         return success_response(EventResponseSerializer(entity).data, request=request)
+
+
+class EventMyView(APIView):
+    """List the authenticated organiser's own events across all statuses."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["Events"],
+        summary="List my events",
+        description="Returns all non-deleted events owned by the authenticated organiser at any status.",
+        responses={
+            200: OpenApiResponse(
+                description="Paginated list of own events.",
+                response=EventResponseSerializer(many=True),
+            ),
+            401: OpenApiResponse(description="Missing or invalid JWT."),
+        },
+    )
+    def get(self, request: Request) -> Response:
+        """Return paginated list of own events."""
+        organiser_id = uuid.UUID(str(request.user.id))
+        events = _LIST_MY_UC(DjangoEventRepository()).execute(organiser_id=organiser_id)
+        paginator = _PAGINATION_CLASS()
+        page = paginator.paginate_queryset(events, request)
+        return paginator.get_paginated_response(EventResponseSerializer(page, many=True).data)

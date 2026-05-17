@@ -62,3 +62,32 @@ class FakeEventRepository(IEventRepository):
         """Overwrite the stored entity and return it."""
         self._store[entity.id] = entity
         return entity
+
+    def list_public(
+        self,
+        *,
+        organiser_id: uuid.UUID | None = None,
+        is_free: bool | None = None,
+        search: str | None = None,
+    ) -> list[EventEntity]:
+        """Return published public non-deleted events, applying optional filters."""
+        results = [
+            e
+            for e in self._store.values()
+            if e.status == "published" and e.visibility == "public" and e.deleted_at is None
+        ]
+        if organiser_id is not None:
+            results = [e for e in results if e.organiser_id == organiser_id]
+        if is_free is not None:
+            results = [e for e in results if e.is_free == is_free]
+        if search is not None:
+            results = [e for e in results if search.lower() in e.title.lower()]
+        return results
+
+    def list_by_organiser(self, organiser_id: uuid.UUID) -> list[EventEntity]:
+        """Return all non-deleted events owned by the given organiser."""
+        return [
+            e
+            for e in self._store.values()
+            if e.organiser_id == organiser_id and e.deleted_at is None
+        ]

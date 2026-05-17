@@ -19,3 +19,15 @@ class IEventRepository(ABC):
 
     @abstractmethod
     def update(self, entity: EventEntity) -> EventEntity: ...
+
+    @abstractmethod
+    def list_public(
+        self,
+        *,
+        organiser_id: uuid.UUID | None = None,
+        is_free: bool | None = None,
+        search: str | None = None,
+    ) -> list[EventEntity]: ...
+
+    @abstractmethod
+    def list_by_organiser(self, organiser_id: uuid.UUID) -> list[EventEntity]: ...

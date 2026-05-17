@@ -39,6 +39,17 @@ class UpdateEventSerializer(serializers.Serializer):
     price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
 
 
+class EventFilterSerializer(serializers.Serializer):
+    """Query parameter validator for the public event list endpoint."""
+
+    organiser_id = serializers.UUIDField(required=False)
+    # NullBooleanField used intentionally: BooleanField treats a missing
+    # QueryDict key as False (HTML checkbox semantics), which would silently
+    # filter out all free events when no is_free param is provided.
+    is_free = serializers.BooleanField(required=False, allow_null=True)
+    search = serializers.CharField(required=False, max_length=255)
+
+
 class EventResponseSerializer(serializers.Serializer):
     """Public shape of an event resource returned by the API."""
 

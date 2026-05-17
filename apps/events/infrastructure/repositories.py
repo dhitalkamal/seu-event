@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+
 from apps.events.domain.entities import EventEntity
 from apps.events.domain.exceptions import EventNotFoundError
 from apps.events.domain.repositories import IEventRepository
@@ -40,3 +42,34 @@ class DjangoEventRepository(IEventRepository):
         obj.deleted_at = entity.deleted_at
         obj.save()
         return obj.to_entity()
+
+    def list_public(
+        self,
+        *,
+        organiser_id: uuid.UUID | None = None,
+        is_free: bool | None = None,
+        search: str | None = None,
+    ) -> list[EventEntity]:
+        """Return published public non-deleted events, applying optional filters."""
+        qs = Event.objects.filter(
+            status="published",
+            visibility="public",
+            deleted_at__isnull=True,
+        )
+        if organiser_id is not None:
+            qs = qs.filter(organiser_id=organiser_id)
+        if is_free is not None:
+            qs = qs.filter(is_free=is_free)
+        if search is not None:
+            qs = qs.filter(title__icontains=search)
+        return [obj.to_entity() for obj in qs.order_by("-created_at")]
+
+    def list_by_organiser(self, organiser_id: uuid.UUID) -> list[EventEntity]:
+        """Return all non-deleted events owned by the organiser across all statuses."""
+        return [
+            obj.to_entity()
+            for obj in Event.objects.filter(
+                organiser_id=organiser_id,
+                deleted_at__isnull=True,
+            ).order_by("-created_at")
+        ]
