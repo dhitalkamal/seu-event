@@ -115,6 +115,14 @@ class Event(models.Model):
     price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     cover_image = models.URLField(max_length=2048, null=True, blank=True)
     is_online = models.BooleanField(default=False)
+    category = models.ForeignKey(
+        Category,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="events",
+    )
+    tags = models.ManyToManyField(Tag, blank=True, related_name="events")
     deleted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -137,6 +145,8 @@ class Event(models.Model):
             price=self.price,
             cover_image=self.cover_image,
             is_online=self.is_online,
+            category_id=self.category_id,
+            tag_ids=[t.id for t in self.tags.all()],
             created_at=self.created_at,
             updated_at=self.updated_at,
             deleted_at=self.deleted_at,
@@ -161,5 +171,6 @@ class Event(models.Model):
             price=entity.price,
             cover_image=entity.cover_image,
             is_online=entity.is_online,
+            category_id=entity.category_id,
             deleted_at=entity.deleted_at,
         )

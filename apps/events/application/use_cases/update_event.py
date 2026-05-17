@@ -8,14 +8,21 @@ from decimal import Decimal
 
 from apps.events.domain.entities import EventEntity
 from apps.events.domain.exceptions import EventDateError, EventNotOwnedError
-from apps.events.domain.repositories import IEventRepository
+from apps.events.domain.repositories import ICategoryRepository, IEventRepository, ITagRepository
 
 
 class UpdateEventUseCase:
     """Apply a partial update to an event owned by the given organiser."""
 
-    def __init__(self, event_repo: IEventRepository) -> None:
+    def __init__(
+        self,
+        event_repo: IEventRepository,
+        category_repo: ICategoryRepository | None = None,
+        tag_repo: ITagRepository | None = None,
+    ) -> None:
         self._events = event_repo
+        self._categories = category_repo
+        self._tags = tag_repo
 
     def execute(
         self,
@@ -33,6 +40,8 @@ class UpdateEventUseCase:
         price: Decimal | None = None,
         cover_image: str | None = None,
         is_online: bool | None = None,
+        category_id: uuid.UUID | None = None,
+        tag_ids: list[uuid.UUID] | None = None,
     ) -> EventEntity:
         """
         Apply only the provided (non-None) fields and persist.
@@ -41,6 +50,8 @@ class UpdateEventUseCase:
         @param organiser_id - UUID from JWT; must match event.organiser_id
         @raises EventNotOwnedError if the requester is not the organiser
         @raises EventDateError if the updated dates are logically invalid
+        @raises CategoryNotFoundError if category_id does not exist
+        @raises TagNotFoundError if any tag_id does not exist
         """
         event = self._events.get_by_id(event_id)
 
@@ -79,6 +90,23 @@ class UpdateEventUseCase:
             event.cover_image = cover_image
         if is_online is not None:
             event.is_online = is_online
+
+        if category_id is not None:
+            if self._categories is None:
+                from apps.events.infrastructure.repositories import DjangoCategoryRepository
+
+                self._categories = DjangoCategoryRepository()
+            self._categories.get_by_id(category_id)
+            event.category_id = category_id
+
+        if tag_ids is not None:
+            if self._tags is None:
+                from apps.events.infrastructure.repositories import DjangoTagRepository
+
+                self._tags = DjangoTagRepository()
+            for tid in tag_ids:
+                self._tags.get_by_id(tid)
+            event.tag_ids = list(tag_ids)
 
         event.updated_at = datetime.now(timezone.utc)
         return self._events.update(event)

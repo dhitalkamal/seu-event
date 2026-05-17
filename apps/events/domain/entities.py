@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
 
@@ -51,6 +51,8 @@ class EventEntity:
     deleted_at: datetime | None = None
     cover_image: str | None = None
     is_online: bool = False
+    category_id: uuid.UUID | None = None
+    tag_ids: list[uuid.UUID] = field(default_factory=list)
 
     @property
     def is_at_capacity(self) -> bool:

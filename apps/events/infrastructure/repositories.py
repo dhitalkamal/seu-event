@@ -74,6 +74,8 @@ class DjangoEventRepository(IEventRepository):
         """Persist a new event and return the saved entity."""
         obj = Event.from_entity(entity)
         obj.save(using="default")
+        if entity.tag_ids:
+            obj.tags.set(entity.tag_ids)
         return obj.to_entity()
 
     def get_by_id(self, event_id: object) -> EventEntity:
@@ -96,8 +98,12 @@ class DjangoEventRepository(IEventRepository):
         obj.visibility = entity.visibility
         obj.is_free = entity.is_free
         obj.price = entity.price
+        obj.cover_image = entity.cover_image
+        obj.is_online = entity.is_online
+        obj.category_id = entity.category_id
         obj.deleted_at = entity.deleted_at
         obj.save()
+        obj.tags.set(entity.tag_ids)
         return obj.to_entity()
 
     def list_public(

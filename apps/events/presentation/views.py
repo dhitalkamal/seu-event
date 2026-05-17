@@ -230,7 +230,11 @@ class CreateEventView(APIView):
         ser.is_valid(raise_exception=True)
         d = ser.validated_data
 
-        entity = CreateEventUseCase(DjangoEventRepository()).execute(
+        entity = CreateEventUseCase(
+            DjangoEventRepository(),
+            category_repo=DjangoCategoryRepository(),
+            tag_repo=DjangoTagRepository(),
+        ).execute(
             organiser_id=uuid.UUID(str(request.user.id)),
             title=d["title"],
             description=d["description"],
@@ -243,6 +247,8 @@ class CreateEventView(APIView):
             price=d.get("price"),
             cover_image=d.get("cover_image"),
             is_online=d.get("is_online", False),
+            category_id=d.get("category_id"),
+            tag_ids=d.get("tag_ids", []),
         )
         return created_response(EventResponseSerializer(entity).data, request=request)
 
@@ -288,7 +294,11 @@ class EventDetailView(APIView):
         """Apply a partial update to the event. Only provided fields are changed."""
         ser = UpdateEventSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
-        entity = UpdateEventUseCase(DjangoEventRepository()).execute(
+        entity = UpdateEventUseCase(
+            DjangoEventRepository(),
+            category_repo=DjangoCategoryRepository(),
+            tag_repo=DjangoTagRepository(),
+        ).execute(
             event_id=event_id,
             organiser_id=uuid.UUID(str(request.user.id)),
             **ser.validated_data,
