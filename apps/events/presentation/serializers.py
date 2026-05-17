@@ -1,2 +1,70 @@
 """DRF serializers for events request deserialization and response shaping."""
+
 from __future__ import annotations
+
+from rest_framework import serializers
+
+
+class CreateEventSerializer(serializers.Serializer):
+    """Payload for creating a new event."""
+
+    title = serializers.CharField(max_length=255)
+    description = serializers.CharField()
+    location = serializers.CharField(max_length=500)
+    start_date = serializers.DateTimeField()
+    end_date = serializers.DateTimeField()
+    capacity = serializers.IntegerField(min_value=1)
+    visibility = serializers.ChoiceField(
+        choices=["public", "private", "unlisted"],
+        default="public",
+    )
+    is_free = serializers.BooleanField(default=True)
+    price = serializers.DecimalField(max_digits=12, decimal_places=2, default="0.00")
+
+
+class UpdateEventSerializer(serializers.Serializer):
+    """Partial-update payload — every field is optional."""
+
+    title = serializers.CharField(max_length=255, required=False)
+    description = serializers.CharField(required=False)
+    location = serializers.CharField(max_length=500, required=False)
+    start_date = serializers.DateTimeField(required=False)
+    end_date = serializers.DateTimeField(required=False)
+    capacity = serializers.IntegerField(min_value=1, required=False)
+    visibility = serializers.ChoiceField(
+        choices=["public", "private", "unlisted"],
+        required=False,
+    )
+    is_free = serializers.BooleanField(required=False)
+    price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
+
+
+class EventFilterSerializer(serializers.Serializer):
+    """Query parameter validator for the public event list endpoint."""
+
+    organiser_id = serializers.UUIDField(required=False)
+    # NullBooleanField used intentionally: BooleanField treats a missing
+    # QueryDict key as False (HTML checkbox semantics), which would silently
+    # filter out all free events when no is_free param is provided.
+    is_free = serializers.BooleanField(required=False, allow_null=True)
+    search = serializers.CharField(required=False, max_length=255)
+
+
+class EventResponseSerializer(serializers.Serializer):
+    """Public shape of an event resource returned by the API."""
+
+    id = serializers.UUIDField()
+    organiser_id = serializers.UUIDField()
+    title = serializers.CharField()
+    description = serializers.CharField()
+    location = serializers.CharField()
+    start_date = serializers.DateTimeField()
+    end_date = serializers.DateTimeField()
+    capacity = serializers.IntegerField()
+    registered_count = serializers.IntegerField()
+    status = serializers.CharField()
+    visibility = serializers.CharField()
+    is_free = serializers.BooleanField()
+    price = serializers.DecimalField(max_digits=12, decimal_places=2)
+    created_at = serializers.DateTimeField()
+    updated_at = serializers.DateTimeField()
