@@ -42,6 +42,7 @@ class UpdateEventUseCase:
         is_online: bool | None = None,
         category_id: uuid.UUID | None = None,
         tag_ids: list[uuid.UUID] | None = None,
+        allowed_domains: list[str] | None = None,
     ) -> EventEntity:
         """
         Apply only the provided (non-None) fields and persist.
@@ -108,6 +109,9 @@ class UpdateEventUseCase:
                 self._tags.get_by_id(tid)
                 self._tags.increment_usage(tid)
             event.tag_ids = list(tag_ids)
+
+        if allowed_domains is not None:
+            event.allowed_domains = [d.lower().strip() for d in allowed_domains if d.strip()]
 
         event.updated_at = datetime.now(timezone.utc)
         return self._events.update(event)

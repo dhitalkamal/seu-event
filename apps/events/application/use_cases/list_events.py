@@ -26,6 +26,7 @@ class ListEventsUseCase:
         date_from: datetime | None = None,
         date_to: datetime | None = None,
         location: str | None = None,
+        user_email_domain: str | None = None,
     ) -> list[EventEntity]:
         """Delegate filtering to the repository and return the matching events."""
         return self._events.list_public(
@@ -37,4 +38,5 @@ class ListEventsUseCase:
             date_from=date_from,
             date_to=date_to,
             location=location,
+            user_email_domain=user_email_domain,
         )

@@ -53,6 +53,8 @@ class EventEntity:
     is_online: bool = False
     category_id: uuid.UUID | None = None
     tag_ids: list[uuid.UUID] = field(default_factory=list)
+    # ! primary USP - empty list means no restriction (visible to everyone)
+    allowed_domains: list[str] = field(default_factory=list)
 
     @property
     def is_at_capacity(self) -> bool:
