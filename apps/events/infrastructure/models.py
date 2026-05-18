@@ -115,6 +115,7 @@ class Event(models.Model):
     price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     cover_image = models.URLField(max_length=2048, null=True, blank=True)
     is_online = models.BooleanField(default=False)
+    online_url = models.URLField(max_length=2048, null=True, blank=True)
     category = models.ForeignKey(
         Category,
         null=True,
@@ -147,6 +148,7 @@ class Event(models.Model):
             price=self.price,
             cover_image=self.cover_image,
             is_online=self.is_online,
+            online_url=self.online_url,
             category_id=self.category_id,
             tag_ids=[t.id for t in self.tags.all()],
             allowed_domains=self.allowed_domains or [],
@@ -174,7 +176,28 @@ class Event(models.Model):
             price=entity.price,
             cover_image=entity.cover_image,
             is_online=entity.is_online,
+            online_url=entity.online_url,
             category_id=entity.category_id,
             allowed_domains=entity.allowed_domains,
             deleted_at=entity.deleted_at,
         )
+
+
+class EventMedia(models.Model):
+    """Gallery image or video attached to an event."""
+
+    class MediaType(models.TextChoices):
+        IMAGE = "image", "Image"
+        VIDEO = "video", "Video"
+
+    class Meta:
+        db_table = '"events"."event_media"'
+        ordering = ["position"]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="media")
+    url = models.URLField(max_length=2048)
+    media_type = models.CharField(max_length=10, choices=MediaType.choices, default=MediaType.IMAGE)
+    caption = models.CharField(max_length=255, blank=True, default="")
+    position = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)

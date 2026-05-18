@@ -22,6 +22,7 @@ class CreateEventSerializer(serializers.Serializer):
     price = serializers.DecimalField(max_digits=12, decimal_places=2, default="0.00")
     cover_image = serializers.URLField(max_length=2048, required=False, allow_null=True)
     is_online = serializers.BooleanField(default=False)
+    online_url = serializers.URLField(max_length=2048, required=False, allow_null=True)
     category_id = serializers.UUIDField(required=False, allow_null=True)
     tag_ids = serializers.ListField(child=serializers.UUIDField(), required=False, default=list)
     # primary USP: list of email domains; empty means no restriction
@@ -47,11 +48,33 @@ class UpdateEventSerializer(serializers.Serializer):
     price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     cover_image = serializers.URLField(max_length=2048, required=False, allow_null=True)
     is_online = serializers.BooleanField(required=False)
+    online_url = serializers.URLField(max_length=2048, required=False, allow_null=True)
     category_id = serializers.UUIDField(required=False, allow_null=True)
     tag_ids = serializers.ListField(child=serializers.UUIDField(), required=False)
     allowed_domains = serializers.ListField(
         child=serializers.CharField(max_length=253), required=False
     )
+
+
+class EventMediaSerializer(serializers.Serializer):
+    """Request body for adding a gallery image or video."""
+
+    url = serializers.URLField(max_length=2048)
+    media_type = serializers.ChoiceField(choices=["image", "video"], default="image")
+    caption = serializers.CharField(max_length=255, required=False, default="")
+    position = serializers.IntegerField(min_value=0, required=False, default=0)
+
+
+class EventMediaResponseSerializer(serializers.Serializer):
+    """Public shape of an event media item."""
+
+    id = serializers.UUIDField()
+    event_id = serializers.UUIDField(source="event.id")
+    url = serializers.URLField()
+    media_type = serializers.CharField()
+    caption = serializers.CharField()
+    position = serializers.IntegerField()
+    created_at = serializers.DateTimeField()
 
 
 class EventFilterSerializer(serializers.Serializer):
@@ -128,6 +151,7 @@ class EventResponseSerializer(serializers.Serializer):
     price = serializers.DecimalField(max_digits=12, decimal_places=2)
     cover_image = serializers.URLField(allow_null=True)
     is_online = serializers.BooleanField()
+    online_url = serializers.URLField(allow_null=True)
     category_id = serializers.UUIDField(allow_null=True)
     tag_ids = serializers.ListField(child=serializers.UUIDField())
     allowed_domains = serializers.ListField(child=serializers.CharField())

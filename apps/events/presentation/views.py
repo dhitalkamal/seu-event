@@ -30,6 +30,7 @@ from apps.events.application.use_cases.update_event import UpdateEventUseCase
 from apps.events.application.use_cases.update_registration_count import (
     UpdateRegistrationCountUseCase,
 )
+from apps.events.infrastructure.models import EventMedia
 from apps.events.infrastructure.repositories import (
     DjangoCategoryRepository,
     DjangoEventRepository,
@@ -41,6 +42,7 @@ from apps.events.presentation.serializers import (
     CreateEventSerializer,
     CreateTagSerializer,
     EventFilterSerializer,
+    EventMediaSerializer,
     EventResponseSerializer,
     RegistrationCountSerializer,
     TagResponseSerializer,
@@ -600,3 +602,102 @@ class CoverImageUploadView(APIView):
             extension=extension,
         )
         return success_response({"url": url}, request=request)
+
+
+# Gallery and media views──────────────────────
+
+
+
+class EventMediaListCreateView(APIView):
+    """List all media for an event or add a new one."""
+
+    def get_permissions(self) -> list:
+        """GET is public; POST requires authentication."""
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
+    @extend_schema(tags=["Events"], summary="List event gallery")
+    def get(self, request: Request, event_id: uuid.UUID) -> Response:
+        """Return all media items for the event ordered by position."""
+        items = EventMedia.objects.filter(event_id=event_id).order_by("position")
+        data = [
+            {
+                "id": str(m.id),
+                "event_id": str(m.event_id),
+                "url": m.url,
+                "media_type": m.media_type,
+                "caption": m.caption,
+                "position": m.position,
+                "created_at": m.created_at.isoformat(),
+            }
+            for m in items
+        ]
+        return success_response(data, request=request)
+
+    @extend_schema(tags=["Events"], summary="Add event gallery item")
+    def post(self, request: Request, event_id: uuid.UUID) -> Response:
+        """Add a media item to the event gallery."""
+        ser = EventMediaSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        d = ser.validated_data
+        media = EventMedia.objects.create(
+            event_id=event_id,
+            url=d["url"],
+            media_type=d.get("media_type", "image"),
+            caption=d.get("caption", ""),
+            position=d.get("position", 0),
+        )
+        return created_response(
+            {
+                "id": str(media.id),
+                "event_id": str(media.event_id),
+                "url": media.url,
+                "media_type": media.media_type,
+                "caption": media.caption,
+                "position": media.position,
+                "created_at": media.created_at.isoformat(),
+            },
+            request=request,
+        )
+
+
+class EventMediaDetailView(APIView):
+    """Update or delete a single gallery item."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Events"], summary="Update event gallery item")
+    def patch(self, request: Request, event_id: uuid.UUID, media_id: uuid.UUID) -> Response:
+        """Update caption or position of a media item."""
+        try:
+            media = EventMedia.objects.get(id=media_id, event_id=event_id)
+        except EventMedia.DoesNotExist:
+            return error_response(
+                code="ERR_EVENT_MEDIA_NOT_FOUND",
+                message="Media item not found.",
+                http_status=404,
+                request=request,
+            )
+        for field in ("caption", "position"):
+            if field in request.data:
+                setattr(media, field, request.data[field])
+        media.save()
+        return success_response(
+            {"id": str(media.id), "caption": media.caption, "position": media.position},
+            request=request,
+        )
+
+    @extend_schema(tags=["Events"], summary="Delete event gallery item")
+    def delete(self, request: Request, event_id: uuid.UUID, media_id: uuid.UUID) -> Response:
+        """Remove a media item from the event gallery."""
+        try:
+            EventMedia.objects.get(id=media_id, event_id=event_id).delete()
+        except EventMedia.DoesNotExist:
+            return error_response(
+                code="ERR_EVENT_MEDIA_NOT_FOUND",
+                message="Media item not found.",
+                http_status=404,
+                request=request,
+            )
+        return success_response({"deleted": True}, request=request)

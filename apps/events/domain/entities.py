@@ -51,6 +51,7 @@ class EventEntity:
     deleted_at: datetime | None = None
     cover_image: str | None = None
     is_online: bool = False
+    online_url: str | None = None
     category_id: uuid.UUID | None = None
     tag_ids: list[uuid.UUID] = field(default_factory=list)
     # ! primary USP - empty list means no restriction (visible to everyone)
