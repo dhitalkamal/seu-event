@@ -15,6 +15,7 @@ from apps.events.domain.exceptions import (
 from apps.events.domain.repositories import (
     ICategoryRepository,
     IEventRepository,
+    IEventSearchIndex,
     ITagRepository,
 )
 
@@ -185,3 +186,19 @@ class FakeTagRepository(ITagRepository):
     def list_all(self) -> list[TagEntity]:
         """Return all stored tags."""
         return list(self._store.values())
+
+
+class FakeEventSearchIndex(IEventSearchIndex):
+    """In-memory event search index for unit tests."""
+
+    def __init__(self) -> None:
+        self.indexed: list[EventEntity] = []
+        self.deleted: list[uuid.UUID] = []
+
+    def index_event(self, entity: EventEntity) -> None:
+        """Record the event as indexed."""
+        self.indexed.append(entity)
+
+    def delete_event(self, event_id: uuid.UUID) -> None:
+        """Record the event_id as deleted from the index."""
+        self.deleted.append(event_id)

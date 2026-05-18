@@ -11,7 +11,7 @@ from apps.events.domain.exceptions import (
     EventNotOwnedError,
     InvalidEventStatusTransitionError,
 )
-from apps.events.domain.repositories import IEventRepository
+from apps.events.domain.repositories import IEventRepository, IEventSearchIndex
 
 
 class PublishEventUseCase:
@@ -20,8 +20,13 @@ class PublishEventUseCase:
     # ! only DRAFT events may be published
     _ALLOWED_FROM: frozenset[str] = frozenset({"draft"})
 
-    def __init__(self, event_repo: IEventRepository) -> None:
+    def __init__(
+        self,
+        event_repo: IEventRepository,
+        search_index: IEventSearchIndex | None = None,
+    ) -> None:
         self._events = event_repo
+        self._index = search_index
 
     def execute(self, *, event_id: uuid.UUID, organiser_id: uuid.UUID) -> EventEntity:
         """
@@ -48,4 +53,7 @@ class PublishEventUseCase:
 
         event.status = "published"
         event.updated_at = datetime.now(timezone.utc)
-        return self._events.update(event)
+        saved = self._events.update(event)
+        if self._index is not None:
+            self._index.index_event(saved)
+        return saved

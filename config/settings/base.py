@@ -116,6 +116,8 @@ MINIO_SECRET_KEY = config("MINIO_SECRET_KEY", default="sansaar_secret_12345")
 MINIO_BUCKET = config("MINIO_BUCKET", default="sansaar-events")
 MINIO_PUBLIC_URL = config("MINIO_PUBLIC_URL", default="http://localhost:9000")
 RABBITMQ_URL = config("RABBITMQ_URL", default="amqp://guest:guest@localhost:5672/")
+ELASTICSEARCH_URL = config("ELASTICSEARCH_URL", default="http://localhost:9200")
+ELASTICSEARCH_EVENTS_INDEX = config("ELASTICSEARCH_EVENTS_INDEX", default="events")
 
 CACHES = {
     "default": {

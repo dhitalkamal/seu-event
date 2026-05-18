@@ -36,6 +36,7 @@ from apps.events.infrastructure.repositories import (
     DjangoEventRepository,
     DjangoTagRepository,
 )
+from apps.events.infrastructure.search_index import ElasticsearchEventIndex
 from apps.events.presentation.serializers import (
     CategoryResponseSerializer,
     CreateCategorySerializer,
@@ -360,7 +361,9 @@ class PublishEventView(APIView):
     )
     def post(self, request: Request, event_id: uuid.UUID) -> Response:
         """Publish the event after validating ownership, status, and start date."""
-        entity = PublishEventUseCase(DjangoEventRepository()).execute(
+        entity = PublishEventUseCase(
+            DjangoEventRepository(), search_index=ElasticsearchEventIndex()
+        ).execute(
             event_id=event_id,
             organiser_id=uuid.UUID(str(request.user.id)),
         )
@@ -604,7 +607,7 @@ class CoverImageUploadView(APIView):
         return success_response({"url": url}, request=request)
 
 
-# Gallery and media views──────────────────────
+# Gallery and media views
 
 
 

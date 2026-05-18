@@ -67,3 +67,13 @@ class IEventRepository(ABC):
 
     @abstractmethod
     def list_by_organiser(self, organiser_id: uuid.UUID) -> list[EventEntity]: ...
+
+
+class IEventSearchIndex(ABC):
+    """Contract for the full-text search index (Elasticsearch)."""
+
+    @abstractmethod
+    def index_event(self, entity: EventEntity) -> None: ...
+
+    @abstractmethod
+    def delete_event(self, event_id: uuid.UUID) -> None: ...

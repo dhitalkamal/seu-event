@@ -15,6 +15,7 @@ dependencies = [
     "pika",
     "drf-spectacular",
     "boto3>=1.43.9",
+    "elasticsearch>=8.0",
 ]
 
 [dependency-groups]
