@@ -5,6 +5,7 @@ from __future__ import annotations
 from django.urls import URLPattern, path
 
 from .views import (
+    AdminEventAnalyticsView,
     CategoryListCreateView,
     CompleteEventView,
     CoverImageUploadView,
@@ -42,4 +43,5 @@ urlpatterns: list[URLPattern] = [
         EventMediaDetailView.as_view(),
         name="event-media-detail",
     ),
+    path("admin/analytics/", AdminEventAnalyticsView.as_view(), name="admin-event-analytics"),
 ]

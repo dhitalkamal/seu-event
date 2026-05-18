@@ -704,3 +704,68 @@ class EventMediaDetailView(APIView):
                 request=request,
             )
         return success_response({"deleted": True}, request=request)
+
+
+class AdminEventAnalyticsView(APIView):
+    """GET /admin/analytics/ - monthly event stats for the superadmin dashboard."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["Admin"],
+        summary="Platform event analytics",
+        description="Monthly event series, 30-day growth, and top events by registration. Staff only.",
+        responses={200: OpenApiResponse(description="Aggregated event analytics.")},
+    )
+    def get(self, request: Request) -> Response:
+        """Return monthly event counts, 30D growth, and top events. Staff only."""
+        if not request.user.is_staff:  # type: ignore[union-attr]
+            return error_response(code="ERR_FORBIDDEN", message="Staff access required.", http_status=403, request=request)
+
+        from datetime import datetime, timedelta, timezone
+
+        from django.db.models import Count
+        from django.db.models.functions import TruncMonth
+
+        from apps.events.infrastructure.models import Event as EventModel
+
+        now = datetime.now(timezone.utc)
+        d30 = now - timedelta(days=30)
+        d60 = now - timedelta(days=60)
+        d365 = now - timedelta(days=365)
+
+        new_30d = EventModel.objects.filter(created_at__gte=d30).count()
+        prev_30d = EventModel.objects.filter(created_at__gte=d60, created_at__lt=d30).count()
+        total = EventModel.objects.count()
+
+        monthly_qs = (
+            EventModel.objects.filter(created_at__gte=d365)
+            .annotate(month=TruncMonth("created_at"))
+            .values("month")
+            .annotate(count=Count("id"))
+            .order_by("month")
+        )
+        month_map = {row["month"].strftime("%Y-%m"): row["count"] for row in monthly_qs}
+
+        series = []
+        for i in range(11, -1, -1):
+            dt = now.replace(day=1) - timedelta(days=30 * i)
+            key = dt.strftime("%Y-%m")
+            series.append(month_map.get(key, 0))
+
+        top_events = list(
+            EventModel.objects.filter(registered_count__gt=0)
+            .order_by("-registered_count")[:10]
+            .values("id", "title", "organisation_id", "registered_count", "status", "event_type")
+        )
+
+        return success_response({
+            "new_events_30d": new_30d,
+            "prev_events_30d": prev_30d,
+            "total_events": total,
+            "monthly_series": series,
+            "top_events": [
+                {**e, "id": str(e["id"]), "organisation_id": str(e["organisation_id"]) if e["organisation_id"] else None}
+                for e in top_events
+            ],
+        }, request=request)
