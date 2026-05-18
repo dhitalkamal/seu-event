@@ -82,12 +82,23 @@ class FakeEventRepository(IEventRepository):
         date_from: object = None,
         date_to: object = None,
         location: str | None = None,
+        user_email_domain: str | None = None,
     ) -> list[EventEntity]:
         """Return published public non-deleted events, applying optional filters."""
         results = [
             e
             for e in self._store.values()
             if e.status == "published" and e.visibility == "public" and e.deleted_at is None
+        ]
+        # domain restriction: events with allowed_domains only visible to matching users
+        results = [
+            e
+            for e in results
+            if not e.allowed_domains
+            or (
+                user_email_domain is not None
+                and user_email_domain.lower() in [d.lower() for d in e.allowed_domains]
+            )
         ]
         if organiser_id is not None:
             results = [e for e in results if e.organiser_id == organiser_id]

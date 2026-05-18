@@ -24,6 +24,10 @@ class CreateEventSerializer(serializers.Serializer):
     is_online = serializers.BooleanField(default=False)
     category_id = serializers.UUIDField(required=False, allow_null=True)
     tag_ids = serializers.ListField(child=serializers.UUIDField(), required=False, default=list)
+    # primary USP: list of email domains; empty means no restriction
+    allowed_domains = serializers.ListField(
+        child=serializers.CharField(max_length=253), required=False, default=list
+    )
 
 
 class UpdateEventSerializer(serializers.Serializer):
@@ -45,6 +49,9 @@ class UpdateEventSerializer(serializers.Serializer):
     is_online = serializers.BooleanField(required=False)
     category_id = serializers.UUIDField(required=False, allow_null=True)
     tag_ids = serializers.ListField(child=serializers.UUIDField(), required=False)
+    allowed_domains = serializers.ListField(
+        child=serializers.CharField(max_length=253), required=False
+    )
 
 
 class EventFilterSerializer(serializers.Serializer):
@@ -123,5 +130,6 @@ class EventResponseSerializer(serializers.Serializer):
     is_online = serializers.BooleanField()
     category_id = serializers.UUIDField(allow_null=True)
     tag_ids = serializers.ListField(child=serializers.UUIDField())
+    allowed_domains = serializers.ListField(child=serializers.CharField())
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()

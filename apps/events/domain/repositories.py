@@ -62,6 +62,7 @@ class IEventRepository(ABC):
         date_from: datetime | None = None,
         date_to: datetime | None = None,
         location: str | None = None,
+        user_email_domain: str | None = None,
     ) -> list[EventEntity]: ...
 
     @abstractmethod

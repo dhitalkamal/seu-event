@@ -41,6 +41,7 @@ class CreateEventUseCase:
         is_online: bool = False,
         category_id: uuid.UUID | None = None,
         tag_ids: list[uuid.UUID] | None = None,
+        allowed_domains: list[str] | None = None,
     ) -> EventEntity:
         """
         Validate dates, category, tags, apply pricing rule, and persist the event.
@@ -108,5 +109,6 @@ class CreateEventUseCase:
             is_online=is_online,
             category_id=category_id,
             tag_ids=resolved_tag_ids,
+            allowed_domains=[d.lower().strip() for d in (allowed_domains or []) if d.strip()],
         )
         return self._events.create(entity)

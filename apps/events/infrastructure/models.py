@@ -123,6 +123,8 @@ class Event(models.Model):
         related_name="events",
     )
     tags = models.ManyToManyField(Tag, blank=True, related_name="events")
+    # primary USP: empty list means no restriction
+    allowed_domains = models.JSONField(default=list, blank=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -147,6 +149,7 @@ class Event(models.Model):
             is_online=self.is_online,
             category_id=self.category_id,
             tag_ids=[t.id for t in self.tags.all()],
+            allowed_domains=self.allowed_domains or [],
             created_at=self.created_at,
             updated_at=self.updated_at,
             deleted_at=self.deleted_at,
@@ -172,5 +175,6 @@ class Event(models.Model):
             cover_image=entity.cover_image,
             is_online=entity.is_online,
             category_id=entity.category_id,
+            allowed_domains=entity.allowed_domains,
             deleted_at=entity.deleted_at,
         )

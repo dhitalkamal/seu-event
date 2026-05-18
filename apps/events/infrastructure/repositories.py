@@ -101,6 +101,7 @@ class DjangoEventRepository(IEventRepository):
         obj.cover_image = entity.cover_image
         obj.is_online = entity.is_online
         obj.category_id = entity.category_id
+        obj.allowed_domains = entity.allowed_domains
         obj.deleted_at = entity.deleted_at
         obj.save()
         obj.tags.set(entity.tag_ids)
@@ -117,6 +118,7 @@ class DjangoEventRepository(IEventRepository):
         date_from: object = None,
         date_to: object = None,
         location: str | None = None,
+        user_email_domain: str | None = None,
     ) -> list[EventEntity]:
         """Return published public non-deleted events, applying optional filters."""
         qs = Event.objects.filter(
@@ -140,7 +142,20 @@ class DjangoEventRepository(IEventRepository):
             qs = qs.filter(start_date__lte=date_to)
         if location is not None:
             qs = qs.filter(location__icontains=location)
-        return [obj.to_entity() for obj in qs.order_by("-created_at")]
+
+        # domain restriction: post-filter in Python (JSONField array contains check)
+        entities = [obj.to_entity() for obj in qs.order_by("-created_at")]
+        if user_email_domain is not None:
+            domain_lower = user_email_domain.lower()
+            entities = [
+                e
+                for e in entities
+                if not e.allowed_domains or domain_lower in [d.lower() for d in e.allowed_domains]
+            ]
+        else:
+            # unauthenticated: only unrestricted events
+            entities = [e for e in entities if not e.allowed_domains]
+        return entities
 
     def list_by_organiser(self, organiser_id: uuid.UUID) -> list[EventEntity]:
         """Return all non-deleted events owned by the organiser across all statuses."""
