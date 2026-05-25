@@ -15,6 +15,7 @@ from .views import (
     EventMediaListCreateView,
     EventMyView,
     HealthCheckView,
+    IcalExportView,
     PublishEventView,
     RegistrationCountView,
     TagListCreateView,
@@ -42,4 +43,5 @@ urlpatterns: list[URLPattern] = [
         name="event-media-detail",
     ),
     path("admin/analytics/", AdminEventAnalyticsView.as_view(), name="admin-event-analytics"),
+    path("events/<uuid:event_id>/ical/", IcalExportView.as_view(), name="event-ical-export"),
 ]

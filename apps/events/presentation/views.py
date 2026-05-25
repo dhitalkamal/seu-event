@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 
 from django.conf import settings
+from django.http import HttpResponse
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import serializers
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -20,6 +21,7 @@ from apps.events.application.use_cases.create_category import CreateCategoryUseC
 from apps.events.application.use_cases.create_event import CreateEventUseCase
 from apps.events.application.use_cases.create_tag import CreateTagUseCase
 from apps.events.application.use_cases.delete_event import DeleteEventUseCase
+from apps.events.application.use_cases.generate_ical import GenerateIcalUseCase
 from apps.events.application.use_cases.get_event import GetEventUseCase
 from apps.events.application.use_cases.list_categories import ListCategoriesUseCase
 from apps.events.application.use_cases.list_events import ListEventsUseCase
@@ -61,6 +63,7 @@ _CREATE_CAT_UC = CreateCategoryUseCase
 _LIST_CAT_UC = ListCategoriesUseCase
 _CREATE_TAG_UC = CreateTagUseCase
 _LIST_TAG_UC = ListTagsUseCase
+_GENERATE_ICAL_UC = GenerateIcalUseCase
 
 _CHECKS = inline_serializer(
     name="DependencyChecks",
@@ -761,3 +764,27 @@ class AdminEventAnalyticsView(APIView):
             },
             request=request,
         )
+
+
+class IcalExportView(APIView):
+    """Export a single event as an iCalendar (.ics) file."""
+
+    authentication_classes: list = []
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        tags=["Events"],
+        summary="Export event as iCal",
+        description="Returns a standards-compliant .ics file for the event. Compatible with Google Calendar, Apple Calendar, and Outlook.",
+        auth=[],
+        responses={
+            200: OpenApiResponse(description="iCalendar file."),
+            404: OpenApiResponse(description="Event not found."),
+        },
+    )
+    def get(self, request: Request, event_id: uuid.UUID) -> HttpResponse:
+        """Generate and return the .ics attachment for the event."""
+        ical_bytes = _GENERATE_ICAL_UC(DjangoEventRepository()).execute(event_id=event_id)
+        response = HttpResponse(ical_bytes, content_type="text/calendar; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="event-{event_id}.ics"'
+        return response
