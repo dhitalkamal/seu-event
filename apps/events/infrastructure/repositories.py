@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import uuid
 
+from django.db import models
+
 from apps.events.domain.entities import CategoryEntity, EventEntity, TagEntity
 from apps.events.domain.exceptions import (
     CategoryNotFoundError,
@@ -44,6 +46,10 @@ class DjangoTagRepository(ITagRepository):
     def list_all(self) -> list[TagEntity]:
         """Return all tags ordered by name."""
         return [obj.to_entity() for obj in Tag.objects.order_by("name")]
+
+    def increment_usage(self, tag_id: uuid.UUID) -> None:
+        """Atomically increment the usage_count for the given tag."""
+        Tag.objects.filter(id=tag_id).update(usage_count=models.F("usage_count") + 1)
 
 
 class DjangoCategoryRepository(ICategoryRepository):
@@ -147,11 +153,7 @@ class DjangoEventRepository(IEventRepository):
         entities = [obj.to_entity() for obj in qs.order_by("-created_at")]
         if user_email_domain is not None:
             domain_lower = user_email_domain.lower()
-            entities = [
-                e
-                for e in entities
-                if not e.allowed_domains or domain_lower in [d.lower() for d in e.allowed_domains]
-            ]
+            entities = [e for e in entities if not e.allowed_domains or domain_lower in [d.lower() for d in e.allowed_domains]]
         else:
             # unauthenticated: only unrestricted events
             entities = [e for e in entities if not e.allowed_domains]

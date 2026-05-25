@@ -44,9 +44,7 @@ class PublishEventUseCase:
             raise EventNotOwnedError("You are not the organiser of this event.")
 
         if event.status not in self._ALLOWED_FROM:
-            raise InvalidEventStatusTransitionError(
-                f"Cannot publish an event with status '{event.status}'."
-            )
+            raise InvalidEventStatusTransitionError(f"Cannot publish an event with status '{event.status}'.")
 
         if event.start_date <= datetime.now(timezone.utc):
             raise EventDateError("Cannot publish an event whose start date has already passed.")

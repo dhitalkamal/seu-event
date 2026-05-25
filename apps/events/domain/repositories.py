@@ -24,6 +24,9 @@ class ITagRepository(ABC):
     @abstractmethod
     def list_all(self) -> list[TagEntity]: ...
 
+    @abstractmethod
+    def increment_usage(self, tag_id: uuid.UUID) -> None: ...
+
 
 class ICategoryRepository(ABC):
     """Persistence contract for Category aggregates."""

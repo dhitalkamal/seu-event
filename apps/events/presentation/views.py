@@ -89,8 +89,7 @@ class HealthCheckView(APIView):
         tags=["Health"],
         summary="Service health check",
         description=(
-            "Checks connectivity to PostgreSQL, Redis, and RabbitMQ. "
-            "Returns 200 when all dependencies are healthy, 503 when any are down."
+            "Checks connectivity to PostgreSQL, Redis, and RabbitMQ. Returns 200 when all dependencies are healthy, 503 when any are down."
         ),
         auth=[],
         responses={
@@ -361,9 +360,7 @@ class PublishEventView(APIView):
     )
     def post(self, request: Request, event_id: uuid.UUID) -> Response:
         """Publish the event after validating ownership, status, and start date."""
-        entity = PublishEventUseCase(
-            DjangoEventRepository(), search_index=ElasticsearchEventIndex()
-        ).execute(
+        entity = PublishEventUseCase(DjangoEventRepository(), search_index=ElasticsearchEventIndex()).execute(
             event_id=event_id,
             organiser_id=uuid.UUID(str(request.user.id)),
         )
@@ -431,10 +428,7 @@ class RegistrationCountView(APIView):
     @extend_schema(
         tags=["Internal"],
         summary="Update event registered_count",
-        description=(
-            "Called by participation-service when a registration is created (+1) "
-            "or cancelled (-1). Not for external clients."
-        ),
+        description=("Called by participation-service when a registration is created (+1) or cancelled (-1). Not for external clients."),
         auth=[],
         request=RegistrationCountSerializer,
         responses={
@@ -477,18 +471,14 @@ class CategoryListCreateView(APIView):
     def get(self, request: Request) -> Response:
         """Return all categories ordered by depth then name."""
         categories = _LIST_CAT_UC(DjangoCategoryRepository()).execute()
-        return success_response(
-            CategoryResponseSerializer(categories, many=True).data, request=request
-        )
+        return success_response(CategoryResponseSerializer(categories, many=True).data, request=request)
 
     @extend_schema(
         tags=["Categories"],
         summary="Create a category",
         request=CreateCategorySerializer,
         responses={
-            201: OpenApiResponse(
-                description="Category created.", response=CategoryResponseSerializer
-            ),
+            201: OpenApiResponse(description="Category created.", response=CategoryResponseSerializer),
             401: OpenApiResponse(description="Missing or invalid JWT."),
             422: OpenApiResponse(description="Validation error or depth limit exceeded."),
         },
@@ -608,7 +598,6 @@ class CoverImageUploadView(APIView):
 
 
 # Gallery and media views
-
 
 
 class EventMediaListCreateView(APIView):
@@ -756,16 +745,19 @@ class AdminEventAnalyticsView(APIView):
         top_events = list(
             EventModel.objects.filter(registered_count__gt=0)
             .order_by("-registered_count")[:10]
-            .values("id", "title", "organisation_id", "registered_count", "status", "event_type")
+            .values("id", "title", "organization_id", "registered_count", "status", "event_type")
         )
 
-        return success_response({
-            "new_events_30d": new_30d,
-            "prev_events_30d": prev_30d,
-            "total_events": total,
-            "monthly_series": series,
-            "top_events": [
-                {**e, "id": str(e["id"]), "organisation_id": str(e["organisation_id"]) if e["organisation_id"] else None}
-                for e in top_events
-            ],
-        }, request=request)
+        return success_response(
+            {
+                "new_events_30d": new_30d,
+                "prev_events_30d": prev_30d,
+                "total_events": total,
+                "monthly_series": series,
+                "top_events": [
+                    {**e, "id": str(e["id"]), "organization_id": str(e["organization_id"]) if e["organization_id"] else None}
+                    for e in top_events
+                ],
+            },
+            request=request,
+        )

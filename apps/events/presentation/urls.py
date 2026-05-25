@@ -35,9 +35,7 @@ urlpatterns: list[URLPattern] = [
     path("categories/", CategoryListCreateView.as_view(), name="category-list-create"),
     path("tags/", TagListCreateView.as_view(), name="tag-list-create"),
     path("uploads/cover/", CoverImageUploadView.as_view(), name="cover-image-upload"),
-    path(
-        "events/<uuid:event_id>/media/", EventMediaListCreateView.as_view(), name="event-media-list"
-    ),
+    path("events/<uuid:event_id>/media/", EventMediaListCreateView.as_view(), name="event-media-list"),
     path(
         "events/<uuid:event_id>/media/<uuid:media_id>/",
         EventMediaDetailView.as_view(),

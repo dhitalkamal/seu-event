@@ -108,9 +108,7 @@ class Event(models.Model):
     capacity = models.PositiveIntegerField()
     registered_count = models.PositiveIntegerField(default=0)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
-    visibility = models.CharField(
-        max_length=20, choices=Visibility.choices, default=Visibility.PUBLIC
-    )
+    visibility = models.CharField(max_length=20, choices=Visibility.choices, default=Visibility.PUBLIC)
     is_free = models.BooleanField(default=True)
     price = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     cover_image = models.URLField(max_length=2048, null=True, blank=True)
