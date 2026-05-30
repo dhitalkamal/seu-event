@@ -19,6 +19,7 @@ dependencies = [
     "boto3>=1.43.9",
     "elasticsearch>=8.0",
     "pillow>=11.0",
+    "dj-database-url>=2.0.0",
 ]
 
 [dependency-groups]

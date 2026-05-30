@@ -295,6 +295,20 @@ class CreateEventView(APIView):
             virtual_capacity=d.get("virtual_capacity"),
             overbooking_percent=d.get("overbooking_percent", 0),
         )
+        # auto-create notification journey for this event
+        try:
+            import json as _json
+            import urllib.request as _urllib
+            req = _urllib.Request(
+                f"http://notification:8005/api/v1/journeys/events/{entity.id}/",
+                data=_json.dumps({"event_id": str(entity.id)}).encode(),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            _urllib.urlopen(req, timeout=5)
+        except Exception:
+            pass
+
         publish_audit(
             request=request,
             user_id=uuid.UUID(str(request.user.id)),
@@ -465,6 +479,32 @@ class PublishEventView(APIView):
             event_id=event_id,
             organizer_id=effective_organizer_id,
         )
+        # broadcast event.published for notification-service
+        try:
+            from apps.events.infrastructure.event_publisher import EventPublisher
+            EventPublisher().publish_event_published(
+                event_id=entity.id,
+                organizer_id=entity.organizer_id,
+                title=entity.title,
+            )
+        except Exception:
+            pass
+
+        # auto-create notification journey (reminders before/after event)
+        try:
+            import json
+            import urllib.request as _urllib
+            notification_url = f"http://notification:8005/api/v1/journeys/events/{entity.id}/"
+            req = _urllib.Request(
+                notification_url,
+                data=json.dumps({"event_id": str(entity.id)}).encode(),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            _urllib.urlopen(req, timeout=5)
+        except Exception:
+            pass
+
         publish_audit(
             request=request,
             user_id=uuid.UUID(str(request.user.id)),
