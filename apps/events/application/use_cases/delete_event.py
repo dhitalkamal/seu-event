@@ -10,23 +10,23 @@ from apps.events.domain.repositories import IEventRepository
 
 
 class DeleteEventUseCase:
-    """Soft-delete an event owned by the given organiser."""
+    """Soft-delete an event owned by the given organizer."""
 
     def __init__(self, event_repo: IEventRepository) -> None:
         self._events = event_repo
 
-    def execute(self, *, event_id: uuid.UUID, organiser_id: uuid.UUID) -> None:
+    def execute(self, *, event_id: uuid.UUID, organizer_id: uuid.UUID) -> None:
         """
         Set deleted_at and status=cancelled on the event.
 
         @param event_id - the event to delete
-        @param organiser_id - UUID from JWT; must match event.organiser_id
-        @raises EventNotOwnedError if the requester is not the organiser
+        @param organizer_id - UUID from JWT; must match event.organizer_id
+        @raises EventNotOwnedError if the requester is not the organizer
         """
         event = self._events.get_by_id(event_id)
 
-        if event.organiser_id != organiser_id:
-            raise EventNotOwnedError("You are not the organiser of this event.")
+        if event.organizer_id != organizer_id:
+            raise EventNotOwnedError("You are not the organizer of this event.")
 
         now = datetime.now(timezone.utc)
         event.deleted_at = now

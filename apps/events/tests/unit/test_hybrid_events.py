@@ -82,7 +82,7 @@ def test_create_event_with_hybrid_mode():
         category_repo=FakeCategoryRepository(),
         tag_repo=FakeTagRepository(),
     ).execute(
-        organiser_id=uuid.uuid4(),
+        organizer_id=uuid.uuid4(),
         title="Hybrid Conference",
         description="Both in-person and online.",
         location="Kathmandu",

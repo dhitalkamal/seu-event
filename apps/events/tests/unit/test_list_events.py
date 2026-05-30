@@ -19,13 +19,13 @@ def test_list_events_returns_published_public_only():
     assert results[0].id == public.id
 
 
-def test_list_events_filter_by_organiser_id():
-    """Filtering by organiser_id returns only that organiser's events."""
-    organiser_id = uuid.uuid4()
-    own = make_event(status="published", visibility="public", organiser_id=organiser_id)
+def test_list_events_filter_by_organizer_id():
+    """Filtering by organizer_id returns only that organizer's events."""
+    organizer_id = uuid.uuid4()
+    own = make_event(status="published", visibility="public", organizer_id=organizer_id)
     other = make_event(status="published", visibility="public")
     repo = FakeEventRepository([own, other])
-    results = ListEventsUseCase(repo).execute(organiser_id=organiser_id)
+    results = ListEventsUseCase(repo).execute(organizer_id=organizer_id)
     assert len(results) == 1
     assert results[0].id == own.id
 

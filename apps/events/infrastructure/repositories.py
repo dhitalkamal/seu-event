@@ -113,7 +113,7 @@ class DjangoEventRepository(IEventRepository):
     def list_public(
         self,
         *,
-        organiser_id: uuid.UUID | None = None,
+        organizer_id: uuid.UUID | None = None,
         is_free: bool | None = None,
         search: str | None = None,
         category_id: uuid.UUID | None = None,
@@ -129,12 +129,18 @@ class DjangoEventRepository(IEventRepository):
             visibility="public",
             deleted_at__isnull=True,
         )
-        if organiser_id is not None:
-            qs = qs.filter(organiser_id=organiser_id)
+        if organizer_id is not None:
+            qs = qs.filter(organizer_id=organizer_id)
         if is_free is not None:
             qs = qs.filter(is_free=is_free)
         if search is not None:
-            qs = qs.filter(title__icontains=search)
+            from django.db.models import Q
+
+            qs = qs.filter(
+                Q(title__icontains=search)
+                | Q(description__icontains=search)
+                | Q(location__icontains=search)
+            )
         if category_id is not None:
             qs = qs.filter(category_id=category_id)
         if tag_id is not None:
@@ -156,12 +162,12 @@ class DjangoEventRepository(IEventRepository):
             entities = [e for e in entities if not e.allowed_domains]
         return entities
 
-    def list_by_organiser(self, organiser_id: uuid.UUID) -> list[EventEntity]:
-        """Return all non-deleted events owned by the organiser across all statuses."""
+    def list_by_organizer(self, organizer_id: uuid.UUID) -> list[EventEntity]:
+        """Return all non-deleted events owned by the organizer across all statuses."""
         return [
             obj.to_entity()
             for obj in Event.objects.filter(
-                organiser_id=organiser_id,
+                organizer_id=organizer_id,
                 deleted_at__isnull=True,
             ).order_by("-created_at")
         ]

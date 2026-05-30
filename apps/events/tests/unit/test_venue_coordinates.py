@@ -48,7 +48,7 @@ class TestCreateEventWithVenueCoordinates:
     def test_create_event_stores_lat_lng(self) -> None:
         """lat/lng passed to create must appear on the returned entity."""
         repo = FakeEventRepository()
-        organiser_id = uuid.uuid4()
+        organizer_id = uuid.uuid4()
 
         from datetime import datetime, timedelta, timezone
 
@@ -58,7 +58,7 @@ class TestCreateEventWithVenueCoordinates:
             category_repo=FakeCategoryRepository(),
             tag_repo=FakeTagRepository(),
         ).execute(
-            organiser_id=organiser_id,
+            organizer_id=organizer_id,
             title="Geo Event",
             description="Has coordinates.",
             location="Patan, Nepal",
@@ -77,7 +77,7 @@ class TestCreateEventWithVenueCoordinates:
     def test_create_event_stores_venue_id(self) -> None:
         """venue_id passed to create must appear on the returned entity."""
         repo = FakeEventRepository()
-        organiser_id = uuid.uuid4()
+        organizer_id = uuid.uuid4()
         venue_id = uuid.uuid4()
 
         from datetime import datetime, timedelta, timezone
@@ -88,7 +88,7 @@ class TestCreateEventWithVenueCoordinates:
             category_repo=FakeCategoryRepository(),
             tag_repo=FakeTagRepository(),
         ).execute(
-            organiser_id=organiser_id,
+            organizer_id=organizer_id,
             title="Venue Event",
             description="Has venue reference.",
             location="Lalitpur",
@@ -105,7 +105,7 @@ class TestCreateEventWithVenueCoordinates:
     def test_create_event_without_venue_fields_has_none(self) -> None:
         """Omitting venue fields must result in None values on the entity."""
         repo = FakeEventRepository()
-        organiser_id = uuid.uuid4()
+        organizer_id = uuid.uuid4()
 
         from datetime import datetime, timedelta, timezone
 
@@ -115,7 +115,7 @@ class TestCreateEventWithVenueCoordinates:
             category_repo=FakeCategoryRepository(),
             tag_repo=FakeTagRepository(),
         ).execute(
-            organiser_id=organiser_id,
+            organizer_id=organizer_id,
             title="Plain Event",
             description="No coordinates.",
             location="Bhaktapur",
@@ -145,7 +145,7 @@ class TestUpdateEventWithVenueCoordinates:
             tag_repo=FakeTagRepository(),
         ).execute(
             event_id=event.id,
-            organiser_id=event.organiser_id,
+            organizer_id=event.organizer_id,
             latitude=Decimal("28.3949"),
             longitude=Decimal("84.1240"),
         )
@@ -165,7 +165,7 @@ class TestUpdateEventWithVenueCoordinates:
             tag_repo=FakeTagRepository(),
         ).execute(
             event_id=event.id,
-            organiser_id=event.organiser_id,
+            organizer_id=event.organizer_id,
             venue_id=new_venue_id,
         )
 

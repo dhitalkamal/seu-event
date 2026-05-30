@@ -22,7 +22,7 @@ def _published_event(**kwargs: object) -> EventEntity:
     now = datetime.now(timezone.utc)
     defaults = dict(
         id=uuid.uuid4(),
-        organiser_id=uuid.uuid4(),
+        organizer_id=uuid.uuid4(),
         title="Redis Test Event",
         description="desc",
         location="Kathmandu",
@@ -111,10 +111,10 @@ class TestGetCapacityCount:
 
 
 class TestPublishEventInitializesRedis:
-    """PublishEventUseCase initialises the Redis capacity counter on publish."""
+    """PublishEventUseCase initializes the Redis capacity counter on publish."""
 
     def test_publish_calls_init_capacity_counter(self) -> None:
-        """After a successful publish, the Redis counter must be initialised."""
+        """After a successful publish, the Redis counter must be initialized."""
         from apps.events.application.use_cases.publish_event import PublishEventUseCase
 
         event = make_event(status="draft", registered_count=5)
@@ -125,7 +125,7 @@ class TestPublishEventInitializesRedis:
         with patch("apps.events.infrastructure.capacity.init_capacity_counter") as mock_init:
             PublishEventUseCase(event_repo=repo, redis_client=mock_redis).execute(
                 event_id=event.id,
-                organiser_id=event.organiser_id,
+                organizer_id=event.organizer_id,
             )
 
         mock_init.assert_called_once()

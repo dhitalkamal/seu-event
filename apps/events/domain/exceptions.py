@@ -13,7 +13,7 @@ class EventNotFoundError(DomainError):
 
 
 class EventNotOwnedError(DomainError):
-    """The requesting user is not the event organiser."""
+    """The requesting user is not the event organizer."""
 
     http_status = 403
     code = "ERR_EVENT_NOT_OWNED"

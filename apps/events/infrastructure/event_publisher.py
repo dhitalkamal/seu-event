@@ -28,7 +28,7 @@ class EventPublisher:
         caller's DB transaction is not rolled back.
 
         @param routing_key - the topic routing key, e.g. "event.updated"
-        @param payload     - JSON-serialisable dict sent as the message body
+        @param payload     - JSON-serializable dict sent as the message body
         """
         try:
             params = pika.URLParameters(settings.RABBITMQ_URL)
@@ -62,21 +62,21 @@ class EventPublisher:
         self,
         *,
         event_id: uuid.UUID,
-        organiser_id: uuid.UUID,
+        organizer_id: uuid.UUID,
         title: str,
     ) -> None:
         """
         Publish an event.updated event after an event is partially updated.
 
         @param event_id     - the updated event's UUID
-        @param organiser_id - UUID of the event organiser
+        @param organizer_id - UUID of the event organizer
         @param title        - current title of the event after the update
         """
         self._publish(
             "event.updated",
             {
                 "event_id": str(event_id),
-                "organiser_id": str(organiser_id),
+                "organizer_id": str(organizer_id),
                 "title": title,
             },
         )
@@ -85,21 +85,21 @@ class EventPublisher:
         self,
         *,
         event_id: uuid.UUID,
-        organiser_id: uuid.UUID,
+        organizer_id: uuid.UUID,
         title: str,
     ) -> None:
         """
         Publish an event.published event after a draft event goes live.
 
         @param event_id     - the published event's UUID
-        @param organiser_id - UUID of the event organiser
+        @param organizer_id - UUID of the event organizer
         @param title        - title of the newly published event
         """
         self._publish(
             "event.published",
             {
                 "event_id": str(event_id),
-                "organiser_id": str(organiser_id),
+                "organizer_id": str(organizer_id),
                 "title": title,
             },
         )
@@ -108,21 +108,21 @@ class EventPublisher:
         self,
         *,
         event_id: uuid.UUID,
-        organiser_id: uuid.UUID,
+        organizer_id: uuid.UUID,
         title: str,
     ) -> None:
         """
         Publish an event.cancelled event after an event is soft-deleted.
 
         @param event_id     - the cancelled event's UUID
-        @param organiser_id - UUID of the event organiser
+        @param organizer_id - UUID of the event organizer
         @param title        - title of the cancelled event
         """
         self._publish(
             "event.cancelled",
             {
                 "event_id": str(event_id),
-                "organiser_id": str(organiser_id),
+                "organizer_id": str(organizer_id),
                 "title": title,
             },
         )

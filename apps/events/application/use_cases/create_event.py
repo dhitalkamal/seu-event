@@ -12,7 +12,7 @@ from apps.events.domain.repositories import ICategoryRepository, IEventRepositor
 
 
 class CreateEventUseCase:
-    """Create a new event owned by the given organiser."""
+    """Create a new event owned by the given organizer."""
 
     def __init__(
         self,
@@ -27,7 +27,7 @@ class CreateEventUseCase:
     def execute(
         self,
         *,
-        organiser_id: uuid.UUID,
+        organizer_id: uuid.UUID,
         title: str,
         description: str,
         location: str,
@@ -42,7 +42,7 @@ class CreateEventUseCase:
         category_id: uuid.UUID | None = None,
         tag_ids: list[uuid.UUID] | None = None,
         allowed_domains: list[str] | None = None,
-        organisation_id: uuid.UUID | None = None,
+        organization_id: uuid.UUID | None = None,
         venue_id: uuid.UUID | None = None,
         latitude: Decimal | None = None,
         longitude: Decimal | None = None,
@@ -53,7 +53,7 @@ class CreateEventUseCase:
         """
         Validate dates, category, tags, apply pricing rule, and persist the event.
 
-        @param organiser_id - UUID from the JWT, never a DB FK
+        @param organizer_id - UUID from the JWT, never a DB FK
         @param title - event name
         @param description - full event description
         @param location - physical or virtual location string
@@ -101,7 +101,7 @@ class CreateEventUseCase:
         now = datetime.now(timezone.utc)
         entity = EventEntity(
             id=uuid.uuid4(),
-            organiser_id=organiser_id,
+            organizer_id=organizer_id,
             title=title,
             description=description,
             location=location,
@@ -120,7 +120,7 @@ class CreateEventUseCase:
             category_id=category_id,
             tag_ids=resolved_tag_ids,
             allowed_domains=[d.lower().strip() for d in (allowed_domains or []) if d.strip()],
-            organisation_id=organisation_id,
+            organization_id=organization_id,
             venue_id=venue_id,
             latitude=latitude,
             longitude=longitude,

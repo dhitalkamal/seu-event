@@ -22,35 +22,35 @@ def _future(days: int = 7) -> datetime:
 
 def test_publish_event_sets_status_published():
     """Publishing a draft event with a future start_date sets status to published."""
-    organiser_id = uuid.uuid4()
-    event = make_event(organiser_id=organiser_id, status="draft", start_date=_future(7))
+    organizer_id = uuid.uuid4()
+    event = make_event(organizer_id=organizer_id, status="draft", start_date=_future(7))
     repo = FakeEventRepository([event])
-    result = PublishEventUseCase(repo).execute(event_id=event.id, organiser_id=organiser_id)
+    result = PublishEventUseCase(repo).execute(event_id=event.id, organizer_id=organizer_id)
     assert result.status == "published"
 
 
 def test_publish_event_wrong_owner_raises():
     """Publishing an event you do not own raises EventNotOwnedError."""
-    event = make_event(organiser_id=uuid.uuid4(), status="draft")
+    event = make_event(organizer_id=uuid.uuid4(), status="draft")
     repo = FakeEventRepository([event])
     with pytest.raises(EventNotOwnedError):
-        PublishEventUseCase(repo).execute(event_id=event.id, organiser_id=uuid.uuid4())
+        PublishEventUseCase(repo).execute(event_id=event.id, organizer_id=uuid.uuid4())
 
 
 def test_publish_event_non_draft_raises():
     """Publishing an already-published event raises InvalidEventStatusTransitionError."""
-    organiser_id = uuid.uuid4()
-    event = make_event(organiser_id=organiser_id, status="published")
+    organizer_id = uuid.uuid4()
+    event = make_event(organizer_id=organizer_id, status="published")
     repo = FakeEventRepository([event])
     with pytest.raises(InvalidEventStatusTransitionError):
-        PublishEventUseCase(repo).execute(event_id=event.id, organiser_id=organiser_id)
+        PublishEventUseCase(repo).execute(event_id=event.id, organizer_id=organizer_id)
 
 
 def test_publish_event_past_start_date_raises():
     """Publishing an event whose start_date has already passed raises EventDateError."""
-    organiser_id = uuid.uuid4()
+    organizer_id = uuid.uuid4()
     past = datetime.now(timezone.utc) - timedelta(hours=1)
-    event = make_event(organiser_id=organiser_id, status="draft", start_date=past)
+    event = make_event(organizer_id=organizer_id, status="draft", start_date=past)
     repo = FakeEventRepository([event])
     with pytest.raises(EventDateError):
-        PublishEventUseCase(repo).execute(event_id=event.id, organiser_id=organiser_id)
+        PublishEventUseCase(repo).execute(event_id=event.id, organizer_id=organizer_id)

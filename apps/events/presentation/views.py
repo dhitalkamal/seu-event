@@ -31,6 +31,7 @@ from apps.events.application.use_cases.update_event import UpdateEventUseCase
 from apps.events.application.use_cases.update_registration_count import (
     UpdateRegistrationCountUseCase,
 )
+from apps.events.infrastructure.audit_publisher import publish_audit
 from apps.events.infrastructure.event_publisher import EventPublisher
 from apps.events.infrastructure.models import EventMedia
 from apps.events.infrastructure.repositories import (
@@ -54,16 +55,16 @@ from apps.events.presentation.serializers import (
 )
 
 
-def _has_org_permission(request: Request, organisation_id: uuid.UUID) -> bool:
+def _has_org_permission(request: Request, organization_id: uuid.UUID) -> bool:
     """
-    Return True when the request carries manager-or-higher org role for the organisation.
+    Return True when the request carries manager-or-higher org role for the organization.
 
-    Used by mutation views when an event belongs to an organisation.
+    Used by mutation views when an event belongs to an organization.
     Builds a throwaway view-like object so IsOrgManager can extract org_id normally.
     """
 
     class _FakeView:
-        org_id: uuid.UUID = organisation_id
+        org_id: uuid.UUID = organization_id
         kwargs: dict = {}
 
     return IsOrgManager().has_permission(request, _FakeView())  # type: ignore[arg-type]
@@ -230,7 +231,7 @@ class CreateEventView(APIView):
                 user_email_domain = email.split("@", 1)[1].lower()
 
         events = _LIST_EVENTS_UC(DjangoEventRepository()).execute(
-            organiser_id=f.get("organiser_id"),
+            organizer_id=f.get("organizer_id"),
             is_free=f.get("is_free"),
             search=f.get("search"),
             category_id=f.get("category_id"),
@@ -253,7 +254,7 @@ class CreateEventView(APIView):
         summary="Create a new event",
         description=(
             "Creates an event in DRAFT status. "
-            "The organiser is inferred from the JWT - no organiser_id in the request body. "
+            "The organizer is inferred from the JWT - no organizer_id in the request body. "
             "Returns 422 if the payload fails validation or dates are invalid."
         ),
         request=CreateEventSerializer,
@@ -274,7 +275,7 @@ class CreateEventView(APIView):
             category_repo=DjangoCategoryRepository(),
             tag_repo=DjangoTagRepository(),
         ).execute(
-            organiser_id=uuid.UUID(str(request.user.id)),
+            organizer_id=uuid.UUID(str(request.user.id)),
             title=d["title"],
             description=d["description"],
             location=d["location"],
@@ -289,10 +290,16 @@ class CreateEventView(APIView):
             category_id=d.get("category_id"),
             tag_ids=d.get("tag_ids", []),
             allowed_domains=d.get("allowed_domains", []),
-            organisation_id=d.get("organisation_id"),
+            organization_id=d.get("organization_id"),
             event_mode=d.get("event_mode", "physical"),
             virtual_capacity=d.get("virtual_capacity"),
             overbooking_percent=d.get("overbooking_percent", 0),
+        )
+        publish_audit(
+            request=request,
+            user_id=uuid.UUID(str(request.user.id)),
+            event_type="event.created",
+            metadata={"event_id": str(entity.id), "title": entity.title},
         )
         return created_response(EventResponseSerializer(entity).data, request=request)
 
@@ -329,7 +336,7 @@ class EventDetailView(APIView):
         responses={
             200: OpenApiResponse(description="Event updated.", response=EventResponseSerializer),
             401: OpenApiResponse(description="Missing or invalid JWT."),
-            403: OpenApiResponse(description="Not the organiser."),
+            403: OpenApiResponse(description="Not the organizer."),
             404: OpenApiResponse(description="Event not found."),
             422: OpenApiResponse(description="Validation error or invalid dates."),
         },
@@ -343,19 +350,19 @@ class EventDetailView(APIView):
         repo = DjangoEventRepository()
         event = GetEventUseCase(repo).execute(event_id=event_id)
 
-        if event.organisation_id is not None:
+        if event.organization_id is not None:
             # org-owned event: manager-or-higher role is sufficient
-            if not _has_org_permission(request, event.organisation_id):
+            if not _has_org_permission(request, event.organization_id):
                 return error_response(
                     code="ERR_EVENT_NOT_OWNED",
                     message="Insufficient org role to update this event.",
                     http_status=403,
                     request=request,
                 )
-            effective_organiser_id = event.organiser_id
+            effective_organizer_id = event.organizer_id
         else:
-            # legacy individual-owned event: must be the organiser
-            effective_organiser_id = uuid.UUID(str(request.user.id))
+            # legacy individual-owned event: must be the organizer
+            effective_organizer_id = uuid.UUID(str(request.user.id))
 
         entity = UpdateEventUseCase(
             repo,
@@ -363,14 +370,20 @@ class EventDetailView(APIView):
             tag_repo=DjangoTagRepository(),
         ).execute(
             event_id=event_id,
-            organiser_id=effective_organiser_id,
+            organizer_id=effective_organizer_id,
             **ser.validated_data,
         )
         # notify downstream services (notification-service creates attendee in-app alerts)
         EventPublisher().publish_event_updated(
             event_id=entity.id,
-            organiser_id=entity.organiser_id,
+            organizer_id=entity.organizer_id,
             title=entity.title,
+        )
+        publish_audit(
+            request=request,
+            user_id=uuid.UUID(str(request.user.id)),
+            event_type="event.updated",
+            metadata={"event_id": str(entity.id), "title": entity.title},
         )
         return success_response(EventResponseSerializer(entity).data, request=request)
 
@@ -380,7 +393,7 @@ class EventDetailView(APIView):
         responses={
             204: OpenApiResponse(description="Event deleted."),
             401: OpenApiResponse(description="Missing or invalid JWT."),
-            403: OpenApiResponse(description="Not the organiser."),
+            403: OpenApiResponse(description="Not the organizer."),
             404: OpenApiResponse(description="Event not found."),
         },
     )
@@ -389,21 +402,27 @@ class EventDetailView(APIView):
         repo = DjangoEventRepository()
         event = GetEventUseCase(repo).execute(event_id=event_id)
 
-        if event.organisation_id is not None:
-            if not _has_org_permission(request, event.organisation_id):
+        if event.organization_id is not None:
+            if not _has_org_permission(request, event.organization_id):
                 return error_response(
                     code="ERR_EVENT_NOT_OWNED",
                     message="Insufficient org role to delete this event.",
                     http_status=403,
                     request=request,
                 )
-            effective_organiser_id = event.organiser_id
+            effective_organizer_id = event.organizer_id
         else:
-            effective_organiser_id = uuid.UUID(str(request.user.id))
+            effective_organizer_id = uuid.UUID(str(request.user.id))
 
         DeleteEventUseCase(repo).execute(
             event_id=event_id,
-            organiser_id=effective_organiser_id,
+            organizer_id=effective_organizer_id,
+        )
+        publish_audit(
+            request=request,
+            user_id=uuid.UUID(str(request.user.id)),
+            event_type="event.deleted",
+            metadata={"event_id": str(event_id)},
         )
         return Response(status=204)
 
@@ -420,7 +439,7 @@ class PublishEventView(APIView):
         responses={
             200: OpenApiResponse(description="Event published.", response=EventResponseSerializer),
             401: OpenApiResponse(description="Missing or invalid JWT."),
-            403: OpenApiResponse(description="Not the organiser."),
+            403: OpenApiResponse(description="Not the organizer."),
             404: OpenApiResponse(description="Event not found."),
             422: OpenApiResponse(description="Invalid status transition or past start date."),
         },
@@ -430,34 +449,40 @@ class PublishEventView(APIView):
         repo = DjangoEventRepository()
         event = GetEventUseCase(repo).execute(event_id=event_id)
 
-        if event.organisation_id is not None:
-            if not _has_org_permission(request, event.organisation_id):
+        if event.organization_id is not None:
+            if not _has_org_permission(request, event.organization_id):
                 return error_response(
                     code="ERR_EVENT_NOT_OWNED",
                     message="Insufficient org role to publish this event.",
                     http_status=403,
                     request=request,
                 )
-            effective_organiser_id = event.organiser_id
+            effective_organizer_id = event.organizer_id
         else:
-            effective_organiser_id = uuid.UUID(str(request.user.id))
+            effective_organizer_id = uuid.UUID(str(request.user.id))
 
         entity = PublishEventUseCase(repo, search_index=ElasticsearchEventIndex()).execute(
             event_id=event_id,
-            organiser_id=effective_organiser_id,
+            organizer_id=effective_organizer_id,
+        )
+        publish_audit(
+            request=request,
+            user_id=uuid.UUID(str(request.user.id)),
+            event_type="event.published",
+            metadata={"event_id": str(entity.id), "title": entity.title},
         )
         return success_response(EventResponseSerializer(entity).data, request=request)
 
 
 class EventMyView(APIView):
-    """List the authenticated organiser's own events across all statuses."""
+    """List the authenticated organizer's own events across all statuses."""
 
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
         tags=["Events"],
         summary="List my events",
-        description="Returns all non-deleted events owned by the authenticated organiser.",
+        description="Returns all non-deleted events owned by the authenticated organizer.",
         responses={
             200: OpenApiResponse(
                 description="Paginated list of own events.",
@@ -468,8 +493,8 @@ class EventMyView(APIView):
     )
     def get(self, request: Request) -> Response:
         """Return paginated list of own events."""
-        organiser_id = uuid.UUID(str(request.user.id))
-        events = _LIST_MY_UC(DjangoEventRepository()).execute(organiser_id=organiser_id)
+        organizer_id = uuid.UUID(str(request.user.id))
+        events = _LIST_MY_UC(DjangoEventRepository()).execute(organizer_id=organizer_id)
         paginator = _PAGINATION_CLASS()
         page = paginator.paginate_queryset(events, request)
         return paginator.get_paginated_response(EventResponseSerializer(page, many=True).data)
@@ -487,7 +512,7 @@ class CompleteEventView(APIView):
         responses={
             200: OpenApiResponse(description="Event completed.", response=EventResponseSerializer),
             401: OpenApiResponse(description="Missing or invalid JWT."),
-            403: OpenApiResponse(description="Not the organiser."),
+            403: OpenApiResponse(description="Not the organizer."),
             404: OpenApiResponse(description="Event not found."),
             422: OpenApiResponse(description="Event is not in published status."),
         },
@@ -496,7 +521,13 @@ class CompleteEventView(APIView):
         """Mark the published event as completed."""
         entity = _COMPLETE_UC(DjangoEventRepository()).execute(
             event_id=event_id,
-            organiser_id=uuid.UUID(str(request.user.id)),
+            organizer_id=uuid.UUID(str(request.user.id)),
+        )
+        publish_audit(
+            request=request,
+            user_id=uuid.UUID(str(request.user.id)),
+            event_type="event.completed",
+            metadata={"event_id": str(entity.id)},
         )
         return success_response(EventResponseSerializer(entity).data, request=request)
 
@@ -585,6 +616,12 @@ class CategoryListCreateView(APIView):
                 http_status=409,
                 request=request,
             )
+        publish_audit(
+            request=request,
+            user_id=uuid.UUID(str(request.user.id)),
+            event_type="category.created",
+            metadata={"category_id": str(entity.id), "name": entity.name, "slug": entity.slug},
+        )
         return created_response(CategoryResponseSerializer(entity).data, request=request)
 
 
@@ -643,6 +680,12 @@ class TagListCreateView(APIView):
                 http_status=409,
                 request=request,
             )
+        publish_audit(
+            request=request,
+            user_id=uuid.UUID(str(request.user.id)),
+            event_type="tag.created",
+            metadata={"tag_id": str(entity.id), "name": entity.name, "slug": entity.slug},
+        )
         return created_response(TagResponseSerializer(entity).data, request=request)
 
 
@@ -858,7 +901,7 @@ class AdminEventAnalyticsView(APIView):
         top_events = list(
             EventModel.objects.filter(registered_count__gt=0)
             .order_by("-registered_count")[:10]
-            .values("id", "title", "organisation_id", "registered_count", "status", "visibility")
+            .values("id", "title", "organization_id", "registered_count", "status", "visibility")
         )
 
         return success_response(
@@ -868,7 +911,7 @@ class AdminEventAnalyticsView(APIView):
                 "total_events": total,
                 "monthly_series": series,
                 "top_events": [
-                    {**e, "id": str(e["id"]), "organisation_id": str(e["organisation_id"]) if e["organisation_id"] else None}
+                    {**e, "id": str(e["id"]), "organization_id": str(e["organization_id"]) if e["organization_id"] else None}
                     for e in top_events
                 ],
             },

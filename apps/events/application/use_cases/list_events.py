@@ -19,7 +19,7 @@ class ListEventsUseCase:
     def execute(
         self,
         *,
-        organiser_id: uuid.UUID | None = None,
+        organizer_id: uuid.UUID | None = None,
         is_free: bool | None = None,
         search: str | None = None,
         category_id: uuid.UUID | None = None,
@@ -42,7 +42,7 @@ class ListEventsUseCase:
         @returns filtered and sorted list of EventEntity
         """
         events = self._events.list_public(
-            organiser_id=organiser_id,
+            organizer_id=organizer_id,
             is_free=is_free,
             search=search,
             category_id=category_id,

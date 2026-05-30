@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
     """Creates the EventReview table for post-event ratings."""
 
     dependencies = [
-        ("events", "0008_add_organisation_id"),
+        ("events", "0008_add_organization_id"),
     ]
 
     operations = [

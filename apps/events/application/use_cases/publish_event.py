@@ -31,7 +31,7 @@ class PublishEventUseCase:
         self._index = search_index
         self._redis = redis_client
 
-    def execute(self, *, event_id: uuid.UUID, organiser_id: uuid.UUID) -> EventEntity:
+    def execute(self, *, event_id: uuid.UUID, organizer_id: uuid.UUID) -> EventEntity:
         """
         Validate ownership and state, then set status to published.
 
@@ -39,15 +39,15 @@ class PublishEventUseCase:
         do fast capacity checks without hitting the DB.
 
         @param event_id - the event to publish
-        @param organiser_id - UUID from the JWT; must match event.organiser_id
-        @raises EventNotOwnedError if the requester is not the organiser
+        @param organizer_id - UUID from the JWT; must match event.organizer_id
+        @raises EventNotOwnedError if the requester is not the organizer
         @raises InvalidEventStatusTransitionError if the event is not in DRAFT
         @raises EventDateError if start_date has already passed
         """
         event = self._events.get_by_id(event_id)
 
-        if event.organiser_id != organiser_id:
-            raise EventNotOwnedError("You are not the organiser of this event.")
+        if event.organizer_id != organizer_id:
+            raise EventNotOwnedError("You are not the organizer of this event.")
 
         if event.status not in self._ALLOWED_FROM:
             raise InvalidEventStatusTransitionError(f"Cannot publish an event with status '{event.status}'.")

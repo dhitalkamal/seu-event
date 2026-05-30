@@ -15,16 +15,16 @@ logger = logging.getLogger(__name__)
 
 
 def _get_client() -> Elasticsearch:
-    """Build a lazily-initialised Elasticsearch client from settings."""
+    """Build a lazily-initialized Elasticsearch client from settings."""
     return Elasticsearch(settings.ELASTICSEARCH_URL)
 
 
 def _event_doc(entity: EventEntity) -> dict:
-    """Serialise an EventEntity to the Elasticsearch document shape."""
+    """Serialize an EventEntity to the Elasticsearch document shape."""
     return {
         "id": str(entity.id),
-        "organiser_id": str(entity.organiser_id),
-        "organisation_id": str(entity.organisation_id) if entity.organisation_id else None,
+        "organizer_id": str(entity.organizer_id),
+        "organization_id": str(entity.organization_id) if entity.organization_id else None,
         "title": entity.title,
         "description": entity.description,
         "event_type": entity.event_type,

@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
                         serialize=False,
                     ),
                 ),
-                ("organiser_id", models.UUIDField()),
+                ("organizer_id", models.UUIDField()),
                 ("title", models.CharField(max_length=255)),
                 ("description", models.TextField()),
                 ("location", models.CharField(max_length=500)),

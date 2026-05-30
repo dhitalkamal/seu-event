@@ -34,7 +34,7 @@ def test_create_event_increments_tag_usage_count():
         category_repo=FakeCategoryRepository(),
         tag_repo=tag_repo,
     ).execute(
-        organiser_id=uuid.uuid4(),
+        organizer_id=uuid.uuid4(),
         title="Rock Night",
         description="Live rock music.",
         location="Kathmandu",
@@ -59,7 +59,7 @@ def test_update_event_increments_tag_usage_count():
     event_repo = FakeEventRepository([event])
     UpdateEventUseCase(event_repo, tag_repo=tag_repo).execute(
         event_id=event.id,
-        organiser_id=event.organiser_id,
+        organizer_id=event.organizer_id,
         tag_ids=[t1.id, t2.id],
     )
     assert tag_repo.get_by_id(t1.id).usage_count == 1
@@ -76,7 +76,7 @@ def test_create_event_no_tags_no_increment():
         category_repo=FakeCategoryRepository(),
         tag_repo=tag_repo,
     ).execute(
-        organiser_id=uuid.uuid4(),
+        organizer_id=uuid.uuid4(),
         title="Solo Event",
         description="No tags.",
         location="Pokhara",

@@ -45,7 +45,7 @@ def _create(
         category_repo=cat_repo or FakeCategoryRepository(),
         tag_repo=tag_repo or FakeTagRepository(),
     ).execute(
-        organiser_id=uuid.uuid4(),
+        organizer_id=uuid.uuid4(),
         title="Festival",
         description="Annual festival.",
         location="Pokhara",
@@ -117,7 +117,7 @@ def test_update_event_sets_category():
     event_repo = FakeEventRepository([event])
     UpdateEventUseCase(event_repo, category_repo=cat_repo).execute(
         event_id=event.id,
-        organiser_id=event.organiser_id,
+        organizer_id=event.organizer_id,
         category_id=cat.id,
     )
     updated = event_repo.get_by_id(event.id)
@@ -132,7 +132,7 @@ def test_update_event_sets_tags():
     event_repo = FakeEventRepository([event])
     UpdateEventUseCase(event_repo, tag_repo=tag_repo).execute(
         event_id=event.id,
-        organiser_id=event.organiser_id,
+        organizer_id=event.organizer_id,
         tag_ids=[t1.id, t2.id],
     )
     updated = event_repo.get_by_id(event.id)

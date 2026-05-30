@@ -1,4 +1,4 @@
-"""Use case: list the authenticated organiser's own events."""
+"""Use case: list the authenticated organizer's own events."""
 
 from __future__ import annotations
 
@@ -9,11 +9,11 @@ from apps.events.domain.repositories import IEventRepository
 
 
 class ListMyEventsUseCase:
-    """Return all non-deleted events owned by the given organiser."""
+    """Return all non-deleted events owned by the given organizer."""
 
     def __init__(self, event_repo: IEventRepository) -> None:
         self._events = event_repo
 
-    def execute(self, *, organiser_id: uuid.UUID) -> list[EventEntity]:
+    def execute(self, *, organizer_id: uuid.UUID) -> list[EventEntity]:
         """Return events across all statuses except soft-deleted."""
-        return self._events.list_by_organiser(organiser_id)
+        return self._events.list_by_organizer(organizer_id)

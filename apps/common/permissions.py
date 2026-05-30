@@ -34,21 +34,21 @@ class IsSuperAdminFromAllowedIP(BasePermission):
 
 class IsOrgRole(BasePermission):
     """
-    Base permission that checks a user's role within a specific organisation.
+    Base permission that checks a user's role within a specific organization.
 
     Subclasses define allowed_roles. The org_id is resolved from the view
     or request in the following priority order:
       1. view.org_id attribute
       2. view.kwargs["org_id"]
-      3. view.kwargs["organisation_id"]
-      4. request.data["organisation_id"]
-      5. request.query_params["organisation_id"]
+      3. view.kwargs["organization_id"]
+      4. request.data["organization_id"]
+      5. request.query_params["organization_id"]
     """
 
     allowed_roles: list[str] = []
 
     def _extract_org_id(self, request: Request, view: APIView) -> str | None:
-        """Return the organisation_id string from context, or None when absent."""
+        """Return the organization_id string from context, or None when absent."""
         # attribute set directly on the view class
         attr = getattr(view, "org_id", None)
         if attr is not None:
@@ -57,17 +57,17 @@ class IsOrgRole(BasePermission):
         kwargs: dict = getattr(view, "kwargs", {}) or {}
         if "org_id" in kwargs:
             return str(kwargs["org_id"])
-        if "organisation_id" in kwargs:
-            return str(kwargs["organisation_id"])
+        if "organization_id" in kwargs:
+            return str(kwargs["organization_id"])
         # request body - only safe to read when the parser has run
         try:
-            body_val = request.data.get("organisation_id")
+            body_val = request.data.get("organization_id")
             if body_val is not None:
                 return str(body_val)
         except Exception:  # noqa: BLE001 - guard against unparsed body
             pass
         # query params
-        qp = request.query_params.get("organisation_id")
+        qp = request.query_params.get("organization_id")
         if qp is not None:
             return str(qp)
         return None
@@ -97,24 +97,24 @@ class IsOrgRole(BasePermission):
 
 
 class IsOrgOwner(IsOrgRole):
-    """Allow only the organisation owner."""
+    """Allow only the organization owner."""
 
     allowed_roles = ["owner"]
 
 
 class IsOrgAdmin(IsOrgRole):
-    """Allow organisation owners and admins."""
+    """Allow organization owners and admins."""
 
     allowed_roles = ["owner", "admin"]
 
 
 class IsOrgManager(IsOrgRole):
-    """Allow organisation owners, admins, and managers."""
+    """Allow organization owners, admins, and managers."""
 
     allowed_roles = ["owner", "admin", "manager"]
 
 
 class IsOrgMember(IsOrgRole):
-    """Allow any recognised organisation member (owner, admin, manager, or member)."""
+    """Allow any recognized organization member (owner, admin, manager, or member)."""
 
     allowed_roles = ["owner", "admin", "manager", "member"]

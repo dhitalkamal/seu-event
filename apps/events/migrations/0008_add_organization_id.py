@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name='event',
-            name='organisation_id',
+            name='organization_id',
             field=models.UUIDField(blank=True, db_index=True, null=True),
         ),
         migrations.AddField(

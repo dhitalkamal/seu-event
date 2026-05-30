@@ -27,7 +27,7 @@ def test_create_event_stores_is_online():
 
     now = datetime.now(timezone.utc)
     entity = CreateEventUseCase(repo).execute(
-        organiser_id=uuid.uuid4(),
+        organizer_id=uuid.uuid4(),
         title="Online Conf",
         description="Fully remote conference.",
         location="Virtual",
@@ -52,7 +52,7 @@ def test_create_event_stores_cover_image():
     now = datetime.now(timezone.utc)
     url = "https://example.com/cover.jpg"
     entity = CreateEventUseCase(repo).execute(
-        organiser_id=uuid.uuid4(),
+        organizer_id=uuid.uuid4(),
         title="Art Show",
         description="Annual art exhibition.",
         location="Gallery 9",
@@ -74,7 +74,7 @@ def test_update_event_sets_is_online():
     repo = FakeEventRepository([event])
     UpdateEventUseCase(repo).execute(
         event_id=event.id,
-        organiser_id=event.organiser_id,
+        organizer_id=event.organizer_id,
         is_online=True,
     )
     updated = repo.get_by_id(event.id)
@@ -88,7 +88,7 @@ def test_update_event_sets_cover_image():
     url = "https://example.com/new-cover.png"
     UpdateEventUseCase(repo).execute(
         event_id=event.id,
-        organiser_id=event.organiser_id,
+        organizer_id=event.organizer_id,
         cover_image=url,
     )
     updated = repo.get_by_id(event.id)

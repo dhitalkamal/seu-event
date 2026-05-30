@@ -25,8 +25,8 @@ class CreateEventSerializer(serializers.Serializer):
     online_url = serializers.URLField(max_length=2048, required=False, allow_null=True)
     category_id = serializers.UUIDField(required=False, allow_null=True)
     tag_ids = serializers.ListField(child=serializers.UUIDField(), required=False, default=list)
-    # optional: attach the event to an organisation
-    organisation_id = serializers.UUIDField(required=False, allow_null=True)
+    # optional: attach the event to an organization
+    organization_id = serializers.UUIDField(required=False, allow_null=True)
     # primary USP: list of email domains; empty means no restriction
     allowed_domains = serializers.ListField(child=serializers.CharField(max_length=253), required=False, default=list)
     # hybrid event fields
@@ -86,7 +86,7 @@ class EventMediaResponseSerializer(serializers.Serializer):
 class EventFilterSerializer(serializers.Serializer):
     """Query parameter validator for the public event list endpoint."""
 
-    organiser_id = serializers.UUIDField(required=False)
+    organizer_id = serializers.UUIDField(required=False)
     category_id = serializers.UUIDField(required=False)
     tag_id = serializers.UUIDField(required=False)
     # NullBooleanField used intentionally: BooleanField treats a missing
@@ -149,8 +149,8 @@ class EventResponseSerializer(serializers.Serializer):
     """Public shape of an event resource returned by the API."""
 
     id = serializers.UUIDField()
-    organiser_id = serializers.UUIDField()
-    organisation_id = serializers.UUIDField(allow_null=True)
+    organizer_id = serializers.UUIDField()
+    organization_id = serializers.UUIDField(allow_null=True)
     title = serializers.CharField()
     description = serializers.CharField()
     location = serializers.CharField()

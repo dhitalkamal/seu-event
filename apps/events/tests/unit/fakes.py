@@ -29,7 +29,7 @@ def make_event(**kwargs: object) -> EventEntity:
     now = _now()
     defaults: dict = {
         "id": uuid.uuid4(),
-        "organiser_id": uuid.uuid4(),
+        "organizer_id": uuid.uuid4(),
         "title": "Test Event",
         "description": "A test event description.",
         "location": "Kathmandu, Nepal",
@@ -75,7 +75,7 @@ class FakeEventRepository(IEventRepository):
     def list_public(
         self,
         *,
-        organiser_id: uuid.UUID | None = None,
+        organizer_id: uuid.UUID | None = None,
         is_free: bool | None = None,
         search: str | None = None,
         category_id: uuid.UUID | None = None,
@@ -94,8 +94,8 @@ class FakeEventRepository(IEventRepository):
             if not e.allowed_domains
             or (user_email_domain is not None and user_email_domain.lower() in [d.lower() for d in e.allowed_domains])
         ]
-        if organiser_id is not None:
-            results = [e for e in results if e.organiser_id == organiser_id]
+        if organizer_id is not None:
+            results = [e for e in results if e.organizer_id == organizer_id]
         if is_free is not None:
             results = [e for e in results if e.is_free == is_free]
         if search is not None:
@@ -112,9 +112,9 @@ class FakeEventRepository(IEventRepository):
             results = [e for e in results if location.lower() in e.location.lower()]
         return results
 
-    def list_by_organiser(self, organiser_id: uuid.UUID) -> list[EventEntity]:
-        """Return all non-deleted events owned by the given organiser."""
-        return [e for e in self._store.values() if e.organiser_id == organiser_id and e.deleted_at is None]
+    def list_by_organizer(self, organizer_id: uuid.UUID) -> list[EventEntity]:
+        """Return all non-deleted events owned by the given organizer."""
+        return [e for e in self._store.values() if e.organizer_id == organizer_id and e.deleted_at is None]
 
 
 class FakeCategoryRepository(ICategoryRepository):

@@ -34,7 +34,7 @@ class EventEntity:
     """A single event on the Sansaar platform."""
 
     id: uuid.UUID
-    organiser_id: uuid.UUID
+    organizer_id: uuid.UUID
     title: str
     description: str
     location: str
@@ -58,8 +58,8 @@ class EventEntity:
     allowed_domains: list[str] = field(default_factory=list)
     # set on events generated as part of a recurrence series
     parent_event_id: uuid.UUID | None = None
-    # optional: set when the event belongs to an organisation rather than an individual
-    organisation_id: uuid.UUID | None = None
+    # optional: set when the event belongs to an organization rather than an individual
+    organization_id: uuid.UUID | None = None
     # venue reference and coordinates; lat/lng supplied by the client (client-side geocoding)
     venue_id: uuid.UUID | None = None
     latitude: Decimal | None = None

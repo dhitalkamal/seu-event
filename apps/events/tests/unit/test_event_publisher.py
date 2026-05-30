@@ -19,7 +19,7 @@ def test_publish_event_updated_sends_correct_routing_key() -> None:
         publisher = EventPublisher()
         publisher.publish_event_updated(
             event_id=uuid.uuid4(),
-            organiser_id=uuid.uuid4(),
+            organizer_id=uuid.uuid4(),
             title="My Conference",
         )
 
@@ -29,7 +29,7 @@ def test_publish_event_updated_sends_correct_routing_key() -> None:
 
 
 def test_publish_event_updated_includes_all_fields() -> None:
-    """publish_event_updated payload contains event_id, organiser_id, and title."""
+    """publish_event_updated payload contains event_id, organizer_id, and title."""
     import json
 
     with patch("apps.events.infrastructure.event_publisher.pika") as mock_pika:
@@ -42,17 +42,17 @@ def test_publish_event_updated_includes_all_fields() -> None:
 
         publisher = EventPublisher()
         event_id = uuid.uuid4()
-        organiser_id = uuid.uuid4()
+        organizer_id = uuid.uuid4()
         publisher.publish_event_updated(
             event_id=event_id,
-            organiser_id=organiser_id,
+            organizer_id=organizer_id,
             title="My Conference",
         )
 
         body = mock_channel.basic_publish.call_args.kwargs["body"]
         payload = json.loads(body)
         assert payload["event_id"] == str(event_id)
-        assert payload["organiser_id"] == str(organiser_id)
+        assert payload["organizer_id"] == str(organizer_id)
         assert payload["title"] == "My Conference"
 
 
@@ -69,7 +69,7 @@ def test_publish_event_published_sends_correct_routing_key() -> None:
         publisher = EventPublisher()
         publisher.publish_event_published(
             event_id=uuid.uuid4(),
-            organiser_id=uuid.uuid4(),
+            organizer_id=uuid.uuid4(),
             title="My Conference",
         )
 
@@ -91,7 +91,7 @@ def test_publish_event_cancelled_sends_correct_routing_key() -> None:
         publisher = EventPublisher()
         publisher.publish_event_cancelled(
             event_id=uuid.uuid4(),
-            organiser_id=uuid.uuid4(),
+            organizer_id=uuid.uuid4(),
             title="My Conference",
         )
 

@@ -12,7 +12,7 @@ from apps.events.domain.repositories import ICategoryRepository, IEventRepositor
 
 
 class UpdateEventUseCase:
-    """Apply a partial update to an event owned by the given organiser."""
+    """Apply a partial update to an event owned by the given organizer."""
 
     def __init__(
         self,
@@ -28,7 +28,7 @@ class UpdateEventUseCase:
         self,
         *,
         event_id: uuid.UUID,
-        organiser_id: uuid.UUID,
+        organizer_id: uuid.UUID,
         title: str | None = None,
         description: str | None = None,
         location: str | None = None,
@@ -54,19 +54,19 @@ class UpdateEventUseCase:
         Apply only the provided (non-None) fields and persist.
 
         @param event_id - the event to update
-        @param organiser_id - UUID from JWT; must match event.organiser_id
+        @param organizer_id - UUID from JWT; must match event.organizer_id
         @param venue_id - optional UUID reference to management-service venue
         @param latitude - optional decimal latitude (client-side geocoded)
         @param longitude - optional decimal longitude (client-side geocoded)
-        @raises EventNotOwnedError if the requester is not the organiser
+        @raises EventNotOwnedError if the requester is not the organizer
         @raises EventDateError if the updated dates are logically invalid
         @raises CategoryNotFoundError if category_id does not exist
         @raises TagNotFoundError if any tag_id does not exist
         """
         event = self._events.get_by_id(event_id)
 
-        if event.organiser_id != organiser_id:
-            raise EventNotOwnedError("You are not the organiser of this event.")
+        if event.organizer_id != organizer_id:
+            raise EventNotOwnedError("You are not the organizer of this event.")
 
         if title is not None:
             event.title = title

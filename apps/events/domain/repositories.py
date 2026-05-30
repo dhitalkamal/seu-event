@@ -54,7 +54,7 @@ class IEventRepository(ABC):
     def list_public(
         self,
         *,
-        organiser_id: uuid.UUID | None = None,
+        organizer_id: uuid.UUID | None = None,
         is_free: bool | None = None,
         search: str | None = None,
         category_id: uuid.UUID | None = None,
@@ -66,7 +66,7 @@ class IEventRepository(ABC):
     ) -> list[EventEntity]: ...
 
     @abstractmethod
-    def list_by_organiser(self, organiser_id: uuid.UUID) -> list[EventEntity]: ...
+    def list_by_organizer(self, organizer_id: uuid.UUID) -> list[EventEntity]: ...
 
 
 class IEventSearchIndex(ABC):

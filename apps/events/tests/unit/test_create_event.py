@@ -23,7 +23,7 @@ def _uc(repo: FakeEventRepository | None = None) -> CreateEventUseCase:
 
 def _defaults(**overrides: object) -> dict:
     base: dict = {
-        "organiser_id": uuid.uuid4(),
+        "organizer_id": uuid.uuid4(),
         "title": "Sansaar Conference",
         "description": "Annual tech conference.",
         "location": "Kathmandu",

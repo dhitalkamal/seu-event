@@ -82,7 +82,7 @@ class Category(models.Model):
 
 
 class Event(models.Model):
-    """Platform event. Owned by an organiser identified by organiser_id from JWT."""
+    """Platform event. Owned by an organizer identified by organizer_id from JWT."""
 
     class Status(models.TextChoices):
         DRAFT = "draft", "Draft"
@@ -104,9 +104,9 @@ class Event(models.Model):
         db_table = "events_event"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    organiser_id = models.UUIDField()
-    # optional: event belongs to an organisation (null for individually-owned events)
-    organisation_id = models.UUIDField(null=True, blank=True, db_index=True)
+    organizer_id = models.UUIDField()
+    # optional: event belongs to an organization (null for individually-owned events)
+    organization_id = models.UUIDField(null=True, blank=True, db_index=True)
     title = models.CharField(max_length=255)
     description = models.TextField()
     location = models.CharField(max_length=500)
@@ -156,8 +156,8 @@ class Event(models.Model):
         """Map this ORM row to a pure-Python EventEntity."""
         return EventEntity(
             id=self.id,
-            organiser_id=self.organiser_id,
-            organisation_id=self.organisation_id,
+            organizer_id=self.organizer_id,
+            organization_id=self.organization_id,
             title=self.title,
             description=self.description,
             location=self.location,
@@ -192,8 +192,8 @@ class Event(models.Model):
         """Build an unsaved ORM instance from an EventEntity."""
         return cls(
             id=entity.id,
-            organiser_id=entity.organiser_id,
-            organisation_id=entity.organisation_id,
+            organizer_id=entity.organizer_id,
+            organization_id=entity.organization_id,
             title=entity.title,
             description=entity.description,
             location=entity.location,
