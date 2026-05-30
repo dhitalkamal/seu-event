@@ -225,10 +225,13 @@ class CreateEventView(APIView):
 
         # extract email domain from JWT for domain-restricted event visibility
         user_email_domain: str | None = None
-        if request.auth is not None:
-            email: str = getattr(request.auth, "get", lambda k, d=None: None)("email") or ""
-            if "@" in email:
-                user_email_domain = email.split("@", 1)[1].lower()
+        if request.user and hasattr(request.user, "token"):
+            try:
+                email: str = request.user.token.get("email", "") or ""
+                if "@" in email:
+                    user_email_domain = email.split("@", 1)[1].lower()
+            except Exception:
+                pass
 
         events = _LIST_EVENTS_UC(DjangoEventRepository()).execute(
             organizer_id=f.get("organizer_id"),
