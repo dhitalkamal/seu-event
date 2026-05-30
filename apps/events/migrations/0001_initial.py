@@ -11,9 +11,9 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
     """Initial events table."""
 
-    dependencies = [
-        ("events", "0000_create_events_schema"),
-    ]
+    initial = True
+
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
@@ -74,6 +74,6 @@ class Migration(migrations.Migration):
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
             ],
-            options={"db_table": '"events"."event"'},
+            options={"db_table": "events_event"},
         ),
     ]

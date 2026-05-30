@@ -15,7 +15,7 @@ class EventReview(models.Model):
     """
 
     class Meta:
-        db_table = '"events"."event_review"'
+        db_table = "events_event_review"
         constraints = [
             models.UniqueConstraint(
                 fields=["event_id", "user_id"],

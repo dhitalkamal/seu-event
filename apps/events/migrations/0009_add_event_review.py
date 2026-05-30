@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
                 ("created_at", models.DateTimeField(auto_now_add=True)),
             ],
             options={
-                "db_table": '"events"."event_review"',
+                "db_table": "events_event_review",
                 "ordering": ["-created_at"],
             },
         ),

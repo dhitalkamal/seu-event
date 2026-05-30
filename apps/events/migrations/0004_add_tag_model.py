@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
                 ('usage_count', models.PositiveIntegerField(default=0)),
             ],
             options={
-                'db_table': '"events"."tag"',
+                'db_table': "events_tag",
             },
         ),
     ]

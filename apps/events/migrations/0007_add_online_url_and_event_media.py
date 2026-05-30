@@ -44,6 +44,6 @@ class Migration(migrations.Migration):
                 ("position", models.PositiveSmallIntegerField(default=0)),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
             ],
-            options={"db_table": '"events"."event_media"', "ordering": ["position"]},
+            options={"db_table": "events_event_media", "ordering": ["position"]},
         ),
     ]

@@ -24,7 +24,7 @@ class TestEventReviewModel:
 
     def test_model_meta_table_name(self) -> None:
         """EventReview must use the events schema."""
-        assert EventReview._meta.db_table == '"events"."event_review"'
+        assert EventReview._meta.db_table == "events_event_review"
 
     def test_model_unique_together_constraint(self) -> None:
         """Each (event_id, user_id) pair must be unique."""

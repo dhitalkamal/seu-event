@@ -14,7 +14,7 @@ class Tag(models.Model):
     """Free-form label that can be attached to events."""
 
     class Meta:
-        db_table = '"events"."tag"'
+        db_table = "events_tag"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
@@ -45,7 +45,7 @@ class Category(models.Model):
     """Hierarchical event category. Self-referential FK; max 3 levels deep."""
 
     class Meta:
-        db_table = '"events"."category"'
+        db_table = "events_category"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
@@ -101,7 +101,7 @@ class Event(models.Model):
         HYBRID = "hybrid", "Hybrid"
 
     class Meta:
-        db_table = '"events"."event"'
+        db_table = "events_event"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organiser_id = models.UUIDField()
@@ -229,7 +229,7 @@ class EventMedia(models.Model):
         VIDEO = "video", "Video"
 
     class Meta:
-        db_table = '"events"."event_media"'
+        db_table = "events_event_media"
         ordering = ["position"]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
