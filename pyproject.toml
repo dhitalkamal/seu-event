@@ -23,7 +23,11 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "django-stubs>=6.0.4",
+    "djangorestframework-stubs>=3.17.0",
+    "mypy>=2.1.0",
     "pytest>=8.0",
+    "pytest-cov>=7.1.0",
     "pytest-django>=4.8",
     "ruff>=0.9",
 ]
@@ -46,8 +50,10 @@ select = ["E", "F", "I", "N", "W"]
 [tool.mypy]
 python_version = "3.13"
 ignore_missing_imports = true
-# django ORM models use descriptor-based fields that mypy cannot infer without stubs
-# suppress module-level annotation noise in infrastructure and presentation layers
+plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
+
+[tool.django-stubs]
+django_settings_module = "config.settings.development"
 [[tool.mypy.overrides]]
 module = [
     "apps.events.infrastructure.*",
