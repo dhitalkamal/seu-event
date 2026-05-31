@@ -9,8 +9,8 @@ class CreateEventSerializer(serializers.Serializer):
     """Payload for creating a new event."""
 
     title = serializers.CharField(max_length=255)
-    description = serializers.CharField()
-    location = serializers.CharField(max_length=500)
+    description = serializers.CharField(allow_blank=True, default="")
+    location = serializers.CharField(max_length=500, allow_blank=True, default="")
     start_date = serializers.DateTimeField()
     end_date = serializers.DateTimeField()
     capacity = serializers.IntegerField(min_value=1)
@@ -60,6 +60,8 @@ class UpdateEventSerializer(serializers.Serializer):
     event_mode = serializers.ChoiceField(choices=["physical", "virtual", "hybrid"], required=False)
     virtual_capacity = serializers.IntegerField(min_value=1, required=False, allow_null=True)
     overbooking_percent = serializers.IntegerField(min_value=0, max_value=100, required=False)
+    organization_id = serializers.UUIDField(required=False, allow_null=True)
+    online_url = serializers.URLField(max_length=2048, required=False, allow_null=True, allow_blank=True)
 
 
 class EventMediaSerializer(serializers.Serializer):

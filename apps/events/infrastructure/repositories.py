@@ -123,24 +123,29 @@ class DjangoEventRepository(IEventRepository):
         location: str | None = None,
         user_email_domain: str | None = None,
     ) -> list[EventEntity]:
-        """Return published public non-deleted events, applying optional filters."""
+        """Return published non-deleted events visible to the user.
+
+        Public events are shown to everyone. Private/unlisted events with
+        allowed_domains are shown to users whose email matches the domain.
+        """
+        from django.db.models import Q
+
         qs = Event.objects.filter(
             status="published",
-            visibility="public",
             deleted_at__isnull=True,
         )
+        if user_email_domain is not None:
+            # authenticated: public events + private/unlisted events matching their domain
+            qs = qs.filter(Q(visibility="public") | Q(visibility__in=["private", "unlisted"]))
+        else:
+            # unauthenticated: public only
+            qs = qs.filter(visibility="public")
         if organizer_id is not None:
             qs = qs.filter(organizer_id=organizer_id)
         if is_free is not None:
             qs = qs.filter(is_free=is_free)
         if search is not None:
-            from django.db.models import Q
-
-            qs = qs.filter(
-                Q(title__icontains=search)
-                | Q(description__icontains=search)
-                | Q(location__icontains=search)
-            )
+            qs = qs.filter(Q(title__icontains=search) | Q(description__icontains=search) | Q(location__icontains=search))
         if category_id is not None:
             qs = qs.filter(category_id=category_id)
         if tag_id is not None:
