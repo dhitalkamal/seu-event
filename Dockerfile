@@ -17,4 +17,6 @@ COPY . .
 
 EXPOSE 8002
 
-CMD ["uv", "run", "gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8002", "--workers", "2"]
+COPY entrypoint.sh .
+RUN chmod +x entrypoint.sh
+CMD ["./entrypoint.sh"]

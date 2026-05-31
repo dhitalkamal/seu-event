@@ -1,2 +1,178 @@
 """Concrete repository implementations backed by the Django ORM."""
+
 from __future__ import annotations
+
+import uuid
+
+from apps.events.domain.entities import CategoryEntity, EventEntity, TagEntity
+from apps.events.domain.exceptions import (
+    CategoryNotFoundError,
+    EventNotFoundError,
+    TagNotFoundError,
+)
+from apps.events.domain.repositories import (
+    ICategoryRepository,
+    IEventRepository,
+    ITagRepository,
+)
+from apps.events.infrastructure.models import Category, Event, Tag
+
+
+class DjangoTagRepository(ITagRepository):
+    """Persists Tag entities using the Django ORM."""
+
+    def create(self, entity: TagEntity) -> TagEntity:
+        """Persist a new tag and return the saved entity."""
+        obj = Tag.from_entity(entity)
+        obj.save()
+        return obj.to_entity()
+
+    def get_by_slug(self, slug: str) -> TagEntity | None:
+        """Return the tag matching slug, or None if absent."""
+        try:
+            return Tag.objects.get(slug=slug).to_entity()
+        except Tag.DoesNotExist:
+            return None
+
+    def get_by_id(self, tag_id: object) -> TagEntity:
+        """Fetch by id. Raises TagNotFoundError if absent."""
+        try:
+            return Tag.objects.get(id=tag_id).to_entity()
+        except Tag.DoesNotExist:
+            raise TagNotFoundError("Tag not found.")
+
+    def list_all(self) -> list[TagEntity]:
+        """Return all tags ordered by name."""
+        return [obj.to_entity() for obj in Tag.objects.order_by("name")]
+
+
+class DjangoCategoryRepository(ICategoryRepository):
+    """Persists Category entities using the Django ORM."""
+
+    def create(self, entity: CategoryEntity) -> CategoryEntity:
+        """Persist a new category and return the saved entity."""
+        obj = Category.from_entity(entity)
+        obj.save()
+        return obj.to_entity()
+
+    def get_by_id(self, category_id: object) -> CategoryEntity:
+        """Fetch by id. Raises CategoryNotFoundError if absent."""
+        try:
+            return Category.objects.get(id=category_id).to_entity()
+        except Category.DoesNotExist:
+            raise CategoryNotFoundError("Category not found.")
+
+    def list_all(self) -> list[CategoryEntity]:
+        """Return all categories ordered by depth then name."""
+        return [obj.to_entity() for obj in Category.objects.order_by("depth", "name")]
+
+
+class DjangoEventRepository(IEventRepository):
+    """Persists Event entities using the Django ORM."""
+
+    def create(self, entity: EventEntity) -> EventEntity:
+        """Persist a new event and return the saved entity."""
+        obj = Event.from_entity(entity)
+        obj.save(using="default")
+        if entity.tag_ids:
+            obj.tags.set(entity.tag_ids)
+        return obj.to_entity()
+
+    def get_by_id(self, event_id: object) -> EventEntity:
+        """Fetch by id, excluding soft-deleted rows. Raises EventNotFoundError if absent."""
+        try:
+            return Event.objects.get(id=event_id, deleted_at__isnull=True).to_entity()
+        except Event.DoesNotExist:
+            raise EventNotFoundError("Event not found.")
+
+    def update(self, entity: EventEntity) -> EventEntity:
+        """Fetch the existing row, update all mutable fields, and save."""
+        obj = Event.objects.get(id=entity.id)
+        obj.title = entity.title
+        obj.description = entity.description
+        obj.location = entity.location
+        obj.start_date = entity.start_date
+        obj.end_date = entity.end_date
+        obj.capacity = entity.capacity
+        obj.status = entity.status
+        obj.visibility = entity.visibility
+        obj.is_free = entity.is_free
+        obj.price = entity.price
+        obj.cover_image = entity.cover_image
+        obj.is_online = entity.is_online
+        obj.category_id = entity.category_id
+        obj.allowed_domains = entity.allowed_domains
+        obj.deleted_at = entity.deleted_at
+        obj.event_mode = entity.event_mode
+        obj.virtual_capacity = entity.virtual_capacity
+        obj.overbooking_percent = entity.overbooking_percent
+        obj.save()
+        obj.tags.set(entity.tag_ids)
+        return obj.to_entity()
+
+    def list_public(
+        self,
+        *,
+        organizer_id: uuid.UUID | None = None,
+        is_free: bool | None = None,
+        search: str | None = None,
+        category_id: uuid.UUID | None = None,
+        tag_id: uuid.UUID | None = None,
+        date_from: object = None,
+        date_to: object = None,
+        location: str | None = None,
+        user_email_domain: str | None = None,
+    ) -> list[EventEntity]:
+        """Return published non-deleted events visible to the user.
+
+        Public events are shown to everyone. Private/unlisted events with
+        allowed_domains are shown to users whose email matches the domain.
+        """
+        from django.db.models import Q
+
+        qs = Event.objects.filter(
+            status="published",
+            deleted_at__isnull=True,
+        )
+        if user_email_domain is not None:
+            # authenticated: public events + private/unlisted events matching their domain
+            qs = qs.filter(Q(visibility="public") | Q(visibility__in=["private", "unlisted"]))
+        else:
+            # unauthenticated: public only
+            qs = qs.filter(visibility="public")
+        if organizer_id is not None:
+            qs = qs.filter(organizer_id=organizer_id)
+        if is_free is not None:
+            qs = qs.filter(is_free=is_free)
+        if search is not None:
+            qs = qs.filter(Q(title__icontains=search) | Q(description__icontains=search) | Q(location__icontains=search))
+        if category_id is not None:
+            qs = qs.filter(category_id=category_id)
+        if tag_id is not None:
+            qs = qs.filter(tags__id=tag_id)
+        if date_from is not None:
+            qs = qs.filter(start_date__gte=date_from)
+        if date_to is not None:
+            qs = qs.filter(start_date__lte=date_to)
+        if location is not None:
+            qs = qs.filter(location__icontains=location)
+
+        # domain restriction: post-filter in Python (JSONField array contains check)
+        entities = [obj.to_entity() for obj in qs.order_by("-created_at")]
+        if user_email_domain is not None:
+            domain_lower = user_email_domain.lower()
+            entities = [e for e in entities if not e.allowed_domains or domain_lower in [d.lower() for d in e.allowed_domains]]
+        else:
+            # unauthenticated: only unrestricted events
+            entities = [e for e in entities if not e.allowed_domains]
+        return entities
+
+    def list_by_organizer(self, organizer_id: uuid.UUID) -> list[EventEntity]:
+        """Return all non-deleted events owned by the organizer across all statuses."""
+        return [
+            obj.to_entity()
+            for obj in Event.objects.filter(
+                organizer_id=organizer_id,
+                deleted_at__isnull=True,
+            ).order_by("-created_at")
+        ]

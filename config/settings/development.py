@@ -1,4 +1,5 @@
 """Development settings for the event-service: debug on, HS256 JWT."""
+
 from __future__ import annotations
 
 from decouple import config
