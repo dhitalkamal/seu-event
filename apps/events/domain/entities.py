@@ -70,6 +70,8 @@ class EventEntity:
     virtual_capacity: int | None = None
     # overbooking allowance as a percentage (0 = no overbooking)
     overbooking_percent: int = 0
+    # when true, users who register after capacity is full join a waitlist instead of being rejected
+    waitlist_enabled: bool = True
 
     @property
     def is_at_capacity(self) -> bool:

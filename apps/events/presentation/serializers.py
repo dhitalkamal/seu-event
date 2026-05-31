@@ -33,6 +33,7 @@ class CreateEventSerializer(serializers.Serializer):
     event_mode = serializers.ChoiceField(choices=["physical", "virtual", "hybrid"], default="physical")
     virtual_capacity = serializers.IntegerField(min_value=1, required=False, allow_null=True)
     overbooking_percent = serializers.IntegerField(min_value=0, max_value=100, default=0)
+    waitlist_enabled = serializers.BooleanField(default=True)
 
 
 class UpdateEventSerializer(serializers.Serializer):
@@ -60,6 +61,7 @@ class UpdateEventSerializer(serializers.Serializer):
     event_mode = serializers.ChoiceField(choices=["physical", "virtual", "hybrid"], required=False)
     virtual_capacity = serializers.IntegerField(min_value=1, required=False, allow_null=True)
     overbooking_percent = serializers.IntegerField(min_value=0, max_value=100, required=False)
+    waitlist_enabled = serializers.BooleanField(required=False)
     organization_id = serializers.UUIDField(required=False, allow_null=True)
     online_url = serializers.URLField(max_length=2048, required=False, allow_null=True, allow_blank=True)
 
@@ -175,6 +177,7 @@ class EventResponseSerializer(serializers.Serializer):
     event_mode = serializers.CharField()
     virtual_capacity = serializers.IntegerField(allow_null=True)
     overbooking_percent = serializers.IntegerField()
+    waitlist_enabled = serializers.BooleanField()
     latitude = serializers.DecimalField(max_digits=9, decimal_places=6, allow_null=True)
     longitude = serializers.DecimalField(max_digits=9, decimal_places=6, allow_null=True)
     deleted_at = serializers.DateTimeField(allow_null=True)
