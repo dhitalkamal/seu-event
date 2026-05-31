@@ -175,3 +175,6 @@ class EventResponseSerializer(serializers.Serializer):
     event_mode = serializers.CharField()
     virtual_capacity = serializers.IntegerField(allow_null=True)
     overbooking_percent = serializers.IntegerField()
+    latitude = serializers.DecimalField(max_digits=9, decimal_places=6, allow_null=True)
+    longitude = serializers.DecimalField(max_digits=9, decimal_places=6, allow_null=True)
+    deleted_at = serializers.DateTimeField(allow_null=True)
