@@ -61,16 +61,17 @@ class Command(BaseCommand):
                 channel.basic_ack(delivery_tag=method.delivery_tag)
                 return
 
-            from apps.events.infrastructure.repositories import DjangoEventRepository
+            from django.db.models import F
+            from django.db.models.functions import Greatest
 
-            repo = DjangoEventRepository()
+            from apps.events.infrastructure.models import Event as EventModel
+
             try:
-                event = repo.get_by_id(uuid.UUID(event_id))
+                eid = uuid.UUID(event_id)
                 if routing_key.endswith(".created"):
-                    event.registered_count = max(0, event.registered_count + 1)
+                    EventModel.objects.filter(id=eid).update(registered_count=F("registered_count") + 1)
                 elif routing_key.endswith(".cancelled"):
-                    event.registered_count = max(0, event.registered_count - 1)
-                repo.update(event)
+                    EventModel.objects.filter(id=eid).update(registered_count=Greatest(F("registered_count") - 1, 0))
                 logger.info("Updated registered_count for event %s via %s", event_id, routing_key)
             except Exception:
                 logger.warning("Could not update event %s.", event_id, exc_info=True)

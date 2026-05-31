@@ -148,6 +148,7 @@ class Event(models.Model):
     # coordinates supplied by client-side geocoding (we never call a geocoding API)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    waitlist_enabled = models.BooleanField(default=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -185,6 +186,7 @@ class Event(models.Model):
             event_mode=self.event_mode,
             virtual_capacity=self.virtual_capacity,
             overbooking_percent=self.overbooking_percent,
+            waitlist_enabled=self.waitlist_enabled,
         )
 
     @classmethod
@@ -218,6 +220,7 @@ class Event(models.Model):
             event_mode=entity.event_mode,
             virtual_capacity=entity.virtual_capacity,
             overbooking_percent=entity.overbooking_percent,
+            waitlist_enabled=entity.waitlist_enabled,
         )
 
 

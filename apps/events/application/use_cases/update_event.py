@@ -51,6 +51,7 @@ class UpdateEventUseCase:
         overbooking_percent: int | None = None,
         organization_id: uuid.UUID | None = None,
         online_url: str | None = None,
+        waitlist_enabled: bool | None = None,
     ) -> EventEntity:
         """
         Apply only the provided (non-None) fields and persist.
@@ -138,6 +139,8 @@ class UpdateEventUseCase:
             event.overbooking_percent = overbooking_percent
         if organization_id is not None:
             event.organization_id = organization_id
+        if waitlist_enabled is not None:
+            event.waitlist_enabled = waitlist_enabled
         if online_url is not None:
             event.online_url = online_url
 
