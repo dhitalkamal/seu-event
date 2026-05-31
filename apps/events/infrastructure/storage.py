@@ -18,10 +18,16 @@ _THUMBNAIL_SIZES: list[tuple[int, int]] = [(200, 200), (400, 400), (800, 800)]
 
 
 def _client() -> boto3.client:
-    """Build a boto3 S3 client pointed at MinIO."""
+    """Build a boto3 S3 client pointed at MinIO or any S3-compatible service."""
+    endpoint = settings.MINIO_ENDPOINT
+    # support full URLs (https://...) or bare host:port for local MinIO
+    if endpoint.startswith("http://") or endpoint.startswith("https://"):
+        endpoint_url = endpoint
+    else:
+        endpoint_url = f"http://{endpoint}"
     return boto3.client(
         "s3",
-        endpoint_url=f"http://{settings.MINIO_ENDPOINT}",
+        endpoint_url=endpoint_url,
         aws_access_key_id=settings.MINIO_ACCESS_KEY,
         aws_secret_access_key=settings.MINIO_SECRET_KEY,
         config=Config(signature_version="s3v4"),
