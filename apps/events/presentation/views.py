@@ -297,6 +297,9 @@ class CreateEventView(APIView):
             event_mode=d.get("event_mode", "physical"),
             virtual_capacity=d.get("virtual_capacity"),
             overbooking_percent=d.get("overbooking_percent", 0),
+            latitude=d.get("latitude"),
+            longitude=d.get("longitude"),
+            waitlist_enabled=d.get("waitlist_enabled", True),
         )
         # auto-create notification journey for this event
         try:
