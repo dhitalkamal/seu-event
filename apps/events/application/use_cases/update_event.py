@@ -49,6 +49,8 @@ class UpdateEventUseCase:
         event_mode: str | None = None,
         virtual_capacity: int | None = None,
         overbooking_percent: int | None = None,
+        organization_id: uuid.UUID | None = None,
+        online_url: str | None = None,
     ) -> EventEntity:
         """
         Apply only the provided (non-None) fields and persist.
@@ -134,6 +136,10 @@ class UpdateEventUseCase:
             event.virtual_capacity = virtual_capacity
         if overbooking_percent is not None:
             event.overbooking_percent = overbooking_percent
+        if organization_id is not None:
+            event.organization_id = organization_id
+        if online_url is not None:
+            event.online_url = online_url
 
         event.updated_at = datetime.now(timezone.utc)
         return self._events.update(event)

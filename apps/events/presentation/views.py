@@ -302,9 +302,16 @@ class CreateEventView(APIView):
         try:
             import json as _json
             import urllib.request as _urllib
+
             req = _urllib.Request(
                 f"http://notification:8005/api/v1/journeys/events/{entity.id}/",
-                data=_json.dumps({"event_id": str(entity.id)}).encode(),
+                data=_json.dumps(
+                    {
+                        "event_id": str(entity.id),
+                        "event_start": entity.start_date.isoformat(),
+                        "event_end": entity.end_date.isoformat(),
+                    }
+                ).encode(),
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
@@ -342,8 +349,35 @@ class EventDetailView(APIView):
         },
     )
     def get(self, request: Request, event_id: uuid.UUID) -> Response:
-        """Return the event matching the given id."""
+        """Return the event matching the given id. Enforces domain restrictions."""
         entity = GetEventUseCase(DjangoEventRepository()).execute(event_id=event_id)
+
+        # domain restriction check - organizers and org members bypass
+        if entity.allowed_domains:
+            is_owner = False
+            user_domain = None
+            if request.user and hasattr(request.user, "id"):
+                user_id = str(request.user.id)
+                is_owner = str(entity.organizer_id) == user_id
+                if not is_owner and entity.organization_id:
+                    is_owner = _has_org_permission(request, entity.organization_id)
+            if request.user and hasattr(request.user, "token"):
+                try:
+                    email = request.user.token.get("email", "") or ""
+                    if "@" in email:
+                        user_domain = email.split("@", 1)[1].lower()
+                except Exception:
+                    pass
+            if not is_owner:
+                allowed = [d.lower() for d in entity.allowed_domains]
+                if not user_domain or user_domain not in allowed:
+                    return error_response(
+                        code="ERR_EVENT_DOMAIN_RESTRICTED",
+                        message="This event is restricted to specific email domains.",
+                        http_status=403,
+                        request=request,
+                    )
+
         return success_response(EventResponseSerializer(entity).data, request=request)
 
     @extend_schema(
@@ -485,6 +519,7 @@ class PublishEventView(APIView):
         # broadcast event.published for notification-service
         try:
             from apps.events.infrastructure.event_publisher import EventPublisher
+
             EventPublisher().publish_event_published(
                 event_id=entity.id,
                 organizer_id=entity.organizer_id,
@@ -497,10 +532,13 @@ class PublishEventView(APIView):
         try:
             import json
             import urllib.request as _urllib
+
             notification_url = f"http://notification:8005/api/v1/journeys/events/{entity.id}/"
             req = _urllib.Request(
                 notification_url,
-                data=json.dumps({"event_id": str(entity.id)}).encode(),
+                data=json.dumps(
+                    {"event_id": str(entity.id), "event_start": entity.start_date.isoformat(), "event_end": entity.end_date.isoformat()}
+                ).encode(),
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
