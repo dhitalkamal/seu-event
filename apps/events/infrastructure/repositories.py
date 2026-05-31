@@ -106,6 +106,7 @@ class DjangoEventRepository(IEventRepository):
         obj.event_mode = entity.event_mode
         obj.virtual_capacity = entity.virtual_capacity
         obj.overbooking_percent = entity.overbooking_percent
+        obj.waitlist_enabled = entity.waitlist_enabled
         obj.save()
         obj.tags.set(entity.tag_ids)
         return obj.to_entity()

@@ -49,6 +49,7 @@ class CreateEventUseCase:
         event_mode: str = "physical",
         virtual_capacity: int | None = None,
         overbooking_percent: int = 0,
+        waitlist_enabled: bool = True,
     ) -> EventEntity:
         """
         Validate dates, category, tags, apply pricing rule, and persist the event.
@@ -127,5 +128,6 @@ class CreateEventUseCase:
             event_mode=event_mode,
             virtual_capacity=virtual_capacity,
             overbooking_percent=overbooking_percent,
+            waitlist_enabled=waitlist_enabled,
         )
         return self._events.create(entity)
